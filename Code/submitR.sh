@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=20
 #SBATCH --ntasks-per-node=40
-#SBATCH --time=0-00:30           # time (DD-HH:MM)
+#SBATCH --time=0-23:00           # time (DD-HH:MM)
 #module load NiaEnv/2018a
 module purge
 module load CCEnv
