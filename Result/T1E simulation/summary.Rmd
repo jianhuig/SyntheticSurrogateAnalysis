@@ -45,7 +45,7 @@ hist(pheno$target, main = "Histogram of simulated phenotype (1 simulation)")
 With $10^5$ replicates, i did not see inflated t1e for surrogate?
 
 ```{r}
-n.sim <- 10^4
+n.sim <- 10^5
 t1e <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/", "t1e,nsim=", n.sim, ".rds"))
 prop <- c()
 for (m in 1:4) {

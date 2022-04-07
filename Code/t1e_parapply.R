@@ -1,7 +1,7 @@
 library(dplyr)
 library(doParallel)
 source("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Code/SynSurrogateSim.R")
-n.sim <- 10^4 # number of replicates
+n.sim <- 10^5 # number of replicates
 
 
 cl <- makeCluster(parallel::detectCores())
