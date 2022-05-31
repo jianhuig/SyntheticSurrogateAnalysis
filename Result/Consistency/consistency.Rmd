@@ -1,0 +1,129 @@
+---
+title: "Consistency result"
+author: "Jianhui Gao"
+date: "5/26/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning=FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+## Simulation Set-up
+
+$$
+\begin{bmatrix}
+           Y_i \\
+           \hat{Y}_i 
+         \end{bmatrix}  \mid   Z_{ik} \sim N\Big(
+         \begin{bmatrix}
+           \beta_G G + \beta_0 + \beta_1 * age_i + \beta_2 * sex_i\\
+           \alpha_0 + \alpha_1 * age_{i} + \alpha_2 * sex_{i}
+         \end{bmatrix}, \begin{bmatrix}
+           1 & \rho\\
+           \rho & 1\\
+         \end{bmatrix}\Big)
+$$
+
+-   $G \sim Bin(2,maf)$
+
+-   $maf = 0.25, age_i \sim N(0,1), sex_i \sim Bern(0.5)$
+
+-   $\alpha_0 = \beta_0 =1$, $\alpha_1 = \beta_1 = 0.42$, $\alpha_2 = \beta_2 = 0.11$, $\beta_g =0.1$
+
+-   missing rate $\in\{0, 0.25 , 0.5, 0.75\}$
+
+-   $\rho \in\{0, 0.25 , 0.5, 0.75\}$
+
+-   Total number of cases = $10^3$.
+
+## Main Figures
+
+```{r}
+n.sim <- 10^4
+result <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
+cal_betag <- function(h2, maf = 0.25) {
+  var <- 2 * maf * (1 - maf)
+  return(sqrt(h2 / (var * (1 - h2))))
+}
+betas <- c()
+missing_rate <- c(0, 0.25, 0.5, 0.75)
+rho <- c(0, 0.25, 0.5, 0.75)
+beta_g <- sapply(seq(0.001, 0.01, 0.001), function(x) cal_betag(h2 = x))
+para <- expand.grid(missing_rate, rho, beta_g)
+for (i in 1:160) {
+  beta.bi <- sapply(1:10000, function(j) result[[j]]$bi.beta[i])
+  beta.target <- sapply(1:10000, function(j) result[[j]]$target.beta[i])
+  betas <- rbind(betas, cbind(para[i, ], beta.bi, beta.target), check.names = FALSE)
+}
+colnames(betas) <- c("missing", "rho", "beta_g", "beta_bi", "beta_target")
+betas$h2 <- betas$beta_g^2 * 0.375 / (betas$beta_g^2 * 0.375 + 1)
+betas %>%
+  filter(h2 == 0.005) %>%
+  filter(missing == 0.25) %>%
+  mutate(rho = paste("rho =", rho)) %>%
+  ggplot(aes(x = beta_target, y = beta_bi)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  facet_wrap(. ~ rho) +
+  ggtitle("Missing Rate = 25%")
+```
+
+```{r}
+betas %>%
+  filter(h2 == 0.005) %>%
+  filter(rho == 0.25) %>%
+  mutate(missing = paste0("missing = ", missing * 100, "%")) %>%
+  ggplot(aes(x = beta_target, y = beta_bi)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  facet_wrap(. ~ missing) +
+  ggtitle("rho = 0.25")
+```
+
+## Supplementary Figs/Tables
+
+```{r}
+betas <- c()
+missing_rate <- c(0, 0.25, 0.5, 0.75)
+rho <- c(0, 0.25, 0.5, 0.75)
+beta_g <- sapply(seq(0.001, 0.01, 0.001), function(x) cal_betag(h2 = x))
+para <- expand.grid(missing_rate, rho, beta_g)
+for (i in 1:160) {
+  beta.bi <- sapply(1:10000, function(j) result[[j]]$bi.beta[i])
+  beta.se <- mean(sapply(1:10000, function(j) result[[j]]$bi.se[i]))
+  betas <- rbind(betas, cbind(para[i, ], mean(beta.bi), beta.se, sd(beta.bi)), check.names = FALSE)
+}
+colnames(betas) <- c("missing", "rho", "beta_g", "point est", "se", "emperical se")
+betas$h2 <- betas$beta_g^2 * 0.375 / (betas$beta_g^2 * 0.375 + 1)
+
+betas %>%
+  filter(h2 == 0.005) %>%
+  select(-h2) %>%
+  knitr::kable(booktabs = T, caption = "Bivariate Estimation")
+```
+
+```{r}
+betas <- c()
+missing_rate <- c(0, 0.25, 0.5, 0.75)
+rho <- c(0, 0.25, 0.5, 0.75)
+beta_g <- sapply(seq(0.001, 0.01, 0.001), function(x) cal_betag(h2 = x))
+para <- expand.grid(missing_rate, rho, beta_g)
+for (i in 1:160) {
+  p.bi <- sapply(1:10000, function(j) result[[j]]$bi.p[i])
+  p.target <- sapply(1:10000, function(j) result[[j]]$target.p[i])
+  betas <- rbind(betas, cbind(para[i, ], p.bi, p.target), check.names = FALSE)
+}
+colnames(betas) <- c("missing", "rho", "beta_g", "p.bi", "p.target")
+betas$h2 <- betas$beta_g^2 * 0.375 / (betas$beta_g^2 * 0.375 + 1)
+betas %>%
+  filter(h2 == 0.005) %>%
+  mutate(missing = paste("missing =", missing)) %>%
+  mutate(rho = paste("rho =", rho)) %>%
+  ggplot(aes(x = -log10(p.target), y = -log10(p.bi))) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  facet_wrap(missing ~ rho)
+```
