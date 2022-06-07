@@ -21,7 +21,7 @@
 
 GenPheno <- function(n,
                      beta,
-                     x,
+                     x = NULL,
                      alpha = NULL,
                      include_intercept = FALSE,
                      miss = 0.0,
@@ -96,5 +96,29 @@ GenGeno <- function(n, snps, m0 = 0.05, m1 = 0.50) {
   })
   out <- do.call(cbind, out)
   storage.mode(out) <- "numeric"
+  return(out)
+}
+
+SampleSizes <- function(n0, mt = 0, ms = 0) {
+  
+  # Input check.
+  m <- mt + ms
+  if (m < 0 || m >= 1) {
+    stop("mt+ms must belong to the interval [0,1).")
+  }
+  
+  # Sample size.
+  out <- list()
+  
+  # Surrogate only.
+  out$n1 <- ceiling(n0 * mt / (1 - mt - ms))
+  
+  # Target only.
+  out$n2 <- ceiling(n0 * ms / (1 - mt - ms))
+  
+  # Overall sample size.
+  out$n <- (n0 + out$n1 + out$n2)
+  
+  # output
   return(out)
 }
