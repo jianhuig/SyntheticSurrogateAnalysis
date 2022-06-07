@@ -21,8 +21,8 @@ $$
            \hat{Y}_i 
          \end{bmatrix}  \mid   Z_{ik} \sim N\Big(
          \begin{bmatrix}
-           \beta_G G + \beta_0 + \beta_1 * age_i + \beta_2 * sex_i\\
-           \alpha_0 + \alpha_1 * age_{i} + \alpha_2 * sex_{i}
+           \beta_G G + \beta X_i\\
+           \alpha X_i
          \end{bmatrix}, \begin{bmatrix}
            1 & \rho\\
            \rho & 1\\
@@ -31,9 +31,9 @@ $$
 
 -   $G \sim Bin(2,maf)$
 
--   $maf= 0.25, age_i \sim N(0,1), sex_i \sim Bern(0.5)$
+-   $maf = 0.25, X_i \sim N(0,1)$
 
--   $\alpha_0 = \beta_0 =1$, $\alpha_1 = \beta_1 = 0.42$, $\alpha_2 = \beta_2 = 0.11$, $\beta_g =0$
+-   $\alpha = \beta = 0.11$, $\beta_g = 0.11575982$
 
 -   missing rate $\in\{0, 0.25 , 0.5, 0.75\}$
 
@@ -124,6 +124,7 @@ power %>%
   guides(color = guide_legend(title = "rho")) +
   ggtitle("Power of bivariate regression, stratified by percent of missing lables")
 ```
+
 Unlike the previous plot, SNP heritability plays no role in relative efficiency. 
 
 ```{r}
