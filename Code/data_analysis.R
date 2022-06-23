@@ -74,7 +74,8 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
   
   vas <- c("marginal","bi")
   vis <- c("beta", "se", "p")
-  names(out) <- as.vector(t(outer(vas, vis, paste, sep = ".")))
+  out <- c(colnames(G)[i], out)
+  names(out) <- c("rsid", as.vector(t(outer(vas, vis, paste, sep = "."))))
   return(out)
 })
 

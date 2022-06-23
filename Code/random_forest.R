@@ -45,9 +45,9 @@ rf_prediction <- function(data, field, model) {
 }
 
 # ========================== Run Model =========================================
-field_id <- 3148
+field_id <- 3063
 combined <- split_data(
-  file = "BMD.tab", field = field_id,
+  file = "FEV1.tab", field = field_id,
   in_id_file = "in.id.rds", out_id_file = "out.id.rds"
 )
 model.rf <- rf(data = combined$train, field = field_id)
