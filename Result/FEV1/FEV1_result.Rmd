@@ -1,5 +1,5 @@
 ---
-title: "Height"
+title: "FEV1"
 output: pdf_document
 ---
 
@@ -35,8 +35,8 @@ The following QC steps are conducted
 
 After QC steps and removing individuals with missing age, sex, or phenotype height, 408207 samples and 211,587 genetic markers remained.
 
-## Height Prediction
-In total, 25697 individuals were removed in the association analysis due to being first-degree relatives with other people. After excluding people with missing weight, 25594 remaining individuals served as training set. The covariates are age, sex, body weight and waist. 
+## FEV1 Prediction
+In total, 25697 individuals were removed in the association analysis due to being first-degree relatives with other people. After excluding people with missing weight, 23030 remaining individuals served as training set. The covariates are age, sex, waist circumference, hip circumference, height, smoking status, BMI, basal metabolic rate and impedance of whole body.
 
 # Relative efficiency
 ```{r}
