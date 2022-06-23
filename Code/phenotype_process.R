@@ -30,6 +30,6 @@ merge_pc <- function(data, pc_file, field){
 }
 
 
-pheno <- get_baseline_measure(file_name = "FEV1.tab")
-pheno <- INT(data = pheno, field = 3063) # Inverse-normal transformation for continuous phenotype
-merge_pc(data = pheno, pc_file = "plink2.eigenvec", field = 3063)
+pheno <- get_baseline_measure(file_name = "BMD.tab")
+pheno <- INT(data = pheno, field = 3148) # Inverse-normal transformation for continuous phenotype
+merge_pc(data = pheno, pc_file = "plink2.eigenvec", field = 3148)

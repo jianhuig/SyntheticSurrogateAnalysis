@@ -122,3 +122,33 @@ SampleSizes <- function(n0, mt = 0, ms = 0) {
   # output
   return(out)
 }
+
+CalcEffectSizes <- function(
+  n_covar, 
+  pve_covar = 0.2, 
+  pve_geno, 
+  n_pcs, 
+  pve_pcs = 0.05, 
+  resid_var = 1.00
+) {
+  
+  # Proportion variation explained by residual.
+  pve_resid <- 1 - pve_covar - pve_geno - pve_pcs
+  
+  if (pve_resid < 0) {
+    stop("Total variation explained by covars, geno, and PCs cannot exceed 1.")
+  }
+  
+  # Coefficients. 
+  bg <- sqrt(resid_var * pve_geno / pve_resid)
+  bx <- sqrt(resid_var * pve_covar / (n_covar * pve_resid))
+  bs <- sqrt(resid_var * pve_pcs / (n_pcs * pve_resid))
+  
+  # Output.
+  out <- list(
+    "bg" = bg,
+    "bx" = rep(bx, times = n_covar),
+    "bs" = rep(bs, times = n_pcs)
+  )
+  return(out)
+}

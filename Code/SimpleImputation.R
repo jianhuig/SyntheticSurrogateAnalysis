@@ -2,43 +2,158 @@ source("SynSurrogateSim.R")
 
 library(dplyr)
 library(doParallel)
+library(ggplot2)
 
 n.sim <- 10^4 # number of replicates
-rho <- c(0, 0.25, 0.5, 0.75)
+n.sample <- 10^3 # total sample size
 
-cl <- makeCluster(type = "MPI")
+# calculate effect size
+var.y <- 1 / (1 - 0.005 - 0.2) # 1/var.y = proportion of variance explained by res
+beta.g <- sqrt(0.005 * var.y / (2 * 0.25 * 0.75)) # (var(G) * beta^2)/var.y = 0.005
+beta.x <- rep(sqrt(0.2 * var.y / 2.5), 2) # beta.1^2 + beta.2^2 + 0.5*beta.1*beta.2 = 0.2 * var.y
+
+# generate covariates
+X <- mvnfast::rmvn(
+  n = n.sample, mu = c(0, 0),
+  sigma = matrix(c(1, 0.5, 0.5, 1), ncol = 2)
+)
+
+#-------------- Known Model ------
+cl <- makeCluster(detectCores())
 registerDoParallel(cl)
+result <- foreach(
+  i = 1:n.sim, .combine = rbind, .packages = c("doParallel"),
+  .errorhandling = "pass"
+) %dopar% {
+  # genotype
+  g <- rbinom(n.sample, size = 2, prob = 0.25)
+  # y complete
+  y <- beta.g * g + X %*% beta.x + rnorm(n.sample)
+  # oracle procedure
+  assoc.oracle <- lm(y ~ X + g - 1)
+  beta.oracle <- summary(assoc.oracle)$coefficients["g", 1]
+  # missing_index
+  missing.id.25 <- sample(1:n.sample, size = ceiling(n.sample * 0.25))
+  missing.id.50 <- sample(1:n.sample, size = ceiling(n.sample * 0.50))
+  missing.id.75 <- sample(1:n.sample, size = ceiling(n.sample * 0.75))
+  # imputed y
+  y.hat <- beta.g * g + X %*% beta.x
+  y.imputed.25 <- y.imputed.50 <- y.imputed.75 <- y
+  y.imputed.25[missing.id.25] <- y.hat[missing.id.25]
+  y.imputed.50[missing.id.50] <- y.hat[missing.id.50]
+  y.imputed.75[missing.id.75] <- y.hat[missing.id.75]
+  # regression with imputed value
+  assoc.imputed.25 <- lm(y.imputed.25 ~ X + g - 1)
+  beta.imputed.25 <- summary(assoc.imputed.25)$coefficients["g", 1]
+  assoc.imputed.50 <- lm(y.imputed.50 ~ X + g - 1)
+  beta.imputed.50 <- summary(assoc.imputed.50)$coefficients["g", 1]
+  assoc.imputed.75 <- lm(y.imputed.75 ~ X + g - 1)
+  beta.imputed.75 <- summary(assoc.imputed.75)$coefficients["g", 1]
 
-result <- foreach(p = rho) %:%
-  foreach(j = 1:n.sim, .combine = rbind, .packages = c("doParallel"), .errorhandling = "pass") %do% {
-    
-    beta_g = 0.1
-    n0 = 10^3 # complete case
-    g <- GenGeno(n = n0, snps = 1)
-    
-    # oracle
-    target <- rnorm(g * beta_g, 1)
-    assoc.oracle <- lm(target ~ g -1)
-    out <- summary(assoc.oracle)$coefficients["g", c(1,2,4)]
-    
-    # correct model + known
-    yhat <- rnorm(g * beta_g + rho * (target - g * beta_g), 1-rho^2)
-    assoc.surrogate <- lm(yhat ~ g -1)
-    out <- c(out, summary(assoc.surrogate)$coefficients["g", c(1,2,4)])
-    
-    # correct model + unknown
-    index <- sample(1:n0, 500)
-    beta_hat <- summary(lm(target[index]~g[index]-1))[["coefficients"]][,1]
-    yhat <- rnorm(g * beta_hat + rho * (target - g * beta_hat), 1-rho^2)
-    assoc.surrogate <- lm(yhat ~ g -1)
-    out <- c(out, summary(assoc.surrogate)$coefficients["g", c(1,2,4)])
-    # incorrect model + known
-    
-    
-    
-    vas <- c("oracle", "target", "surrogate", "bi")
-    vis <- c("beta", "se", "p")
-    names(out) <- as.vector(t(outer(vas, vis, paste, sep=".")))
-    out}
+  out <- c(beta.oracle, beta.imputed.25, beta.imputed.50, beta.imputed.75)
+  names(out) <- c("oracle", "25% missing", "50% missing", "75% missing")
+  out
+}
+stopCluster(cl)
 
-saveRDS(result, file = "t1e.rds")
+result %>%
+  data.frame() %>%
+  tidyr::gather() %>%
+  ggplot(aes(x = key, y = value, color = key)) +
+  geom_boxplot() +
+  geom_hline(yintercept = beta_g, color = "red")
+
+#-----Multiple Imputation, Incorrectly specified ------
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+result <- foreach(
+  i = 1:n.sim, .combine = rbind, .packages = c("doParallel"),
+  .errorhandling = "pass"
+) %dopar% {
+  # genotype
+  g <- rbinom(n.sample, size = 2, prob = 0.25)
+  # y complete
+  y <- beta.g * g + X %*% beta.x + rnorm(n.sample)
+  # oracle procedure
+  assoc.oracle <- lm(y ~ X + g)
+  beta.oracle <- summary(assoc.oracle)$coefficients["g", 1]
+  # missing_index
+  missing.id.25 <- sample(1:n.sample, size = ceiling(n.sample * 0.25))
+  missing.id.50 <- sample(1:n.sample, size = ceiling(n.sample * 0.50))
+  missing.id.75 <- sample(1:n.sample, size = ceiling(n.sample * 0.75))
+  # imputed y
+  y.hat <- beta.g * g + X %*% beta.x
+  y.imputed.25 <- y.imputed.50 <- y.imputed.75 <- y
+  y.imputed.25[missing.id.25] <- y.hat[missing.id.25]
+  y.imputed.50[missing.id.50] <- y.hat[missing.id.50]
+  y.imputed.75[missing.id.75] <- y.hat[missing.id.75]
+  # regression with imputed value
+  assoc.imputed.25 <- lm(y.imputed.25 ~ X + g)
+  beta.imputed.25 <- summary(assoc.imputed.25)$coefficients["g", 1]
+  assoc.imputed.50 <- lm(y.imputed.50 ~ X + g)
+  beta.imputed.50 <- summary(assoc.imputed.50)$coefficients["g", 1]
+  assoc.imputed.75 <- lm(y.imputed.75 ~ X + g)
+  beta.imputed.75 <- summary(assoc.imputed.75)$coefficients["g", 1]
+  
+  out <- c(beta.oracle, beta.imputed.25, beta.imputed.50, beta.imputed.75)
+  names(out) <- c("oracle", "25% missing", "50% missing", "75% missing")
+  out
+}
+stopCluster(cl)
+
+result %>%
+  data.frame() %>%
+  tidyr::gather() %>%
+  ggplot(aes(x = key, y = value, color = key)) +
+  geom_boxplot() +
+  geom_hline(yintercept = beta_g, color = "red")
+
+#-------------- Changing the target outcome ------
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+result <- foreach(
+  i = 1:n.sim, .combine = rbind, .packages = c("doParallel", "dplyr"),
+  .errorhandling = "pass"
+) %dopar% {
+  # genotype
+  g <- rbinom(n.sample, size = 2, prob = 0.25)
+  # y complete
+  y <- beta.g * g + X %*% beta.x + rnorm(n.sample)
+  # oracle procedure
+  assoc.oracle <- lm(y ~ X + g)
+  beta.oracle <- summary(assoc.oracle)$coefficients["g", 1]
+  # missing_index
+  missing.id.25 <- sample(1:n.sample, size = ceiling(n.sample * 0.25))
+  missing.id.50 <- sample(1:n.sample, size = ceiling(n.sample * 0.50))
+  missing.id.75 <- sample(1:n.sample, size = ceiling(n.sample * 0.75))
+  # missing y
+  y.imputed.25 <- y.imputed.50 <- y.imputed.75 <- y
+  y.imputed.25[missing.id.25] <- NA
+  y.imputed.50[missing.id.50] <- NA
+  y.imputed.75[missing.id.75] <- NA
+  # regression with imputed value
+  assoc.imputed.25 <- lm(y.imputed.25 ~ X + g)
+  y.imputed.25 <- predict(assoc.imputed.25, cbind(X, g) %>% data.frame())
+  assoc.imputed.25 <- lm(y.imputed.25 ~ X + g)
+  beta.imputed.25 <- summary(assoc.imputed.25)$coefficients["g", 1]
+  assoc.imputed.50 <- lm(y.imputed.50 ~ X + g)
+  y.imputed.50 <- predict(assoc.imputed.50, cbind(X, g) %>% data.frame())
+  assoc.imputed.50 <- lm(y.imputed.50 ~ X + g)
+  beta.imputed.50 <- summary(assoc.imputed.50)$coefficients["g", 1]
+  assoc.imputed.75 <- lm(y.imputed.75 ~ X + g)
+  y.imputed.75 <- predict(assoc.imputed.75, cbind(X, g) %>% data.frame())
+  assoc.imputed.75 <- lm(y.imputed.75 ~ X + g)
+  beta.imputed.75 <- summary(assoc.imputed.75)$coefficients["g", 1]
+  
+  out <- c(beta.oracle, beta.imputed.25, beta.imputed.50, beta.imputed.75)
+  names(out) <- c("oracle", "25% missing", "50% missing", "75% missing")
+  out
+}
+stopCluster(cl)
+
+result %>%
+  data.frame() %>%
+  tidyr::gather() %>%
+  ggplot(aes(x = key, y = value, color = key)) +
+  geom_boxplot() +
+  geom_hline(yintercept = beta_g, color = "red")

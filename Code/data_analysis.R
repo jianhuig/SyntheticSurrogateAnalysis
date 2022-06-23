@@ -7,11 +7,11 @@ library(BEDMatrix)
 create_missing_phenotypes <- function(field, in_id_file, rate, seed = 123) {
   temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
   in_id <- readRDS(in_id_file)
-  temp <- temp %>% filter(f.eid %in% in_id) %>% filter(!is.na(int))
-
+  temp <- temp %>% filter(f.eid %in% in_id)
+  
   # number of missing phenotypes
   nmissing <- floor(nrow(temp) * rate)
-
+  
   set.seed(seed)
   missing_index <- sample(which(!is.na(temp$int)), size = nmissing)
   
@@ -34,17 +34,10 @@ merge_data <- function(pdata, field = field_id, int = TRUE) {
   return(rf_model %>% inner_join(pdata, by = "f.eid"))
 }
 
-
-args <- (commandArgs(TRUE))
-print(args)
-for (k in 1:length(args)) {
-  eval(parse(text = args[[k]]))
-}
-
-field_id <- 3063
+field_id <- 3148
 
 pdata <- create_missing_phenotypes(field = field_id, 
-                                   in_id_file = "in.id.rds", rate = missing_rate)
+                                   in_id_file = "in.id.rds", rate = 0)
 pheno <- merge_data(pdata = pdata)
 G <- BEDMatrix::BEDMatrix(path = "final.bed", simple_names = T) # read genetic data
 
@@ -64,13 +57,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
     cbind(pheno %>% select(int, f.21022.0.0, f.22001.0.0, starts_with("PC")), g)
   ))
   out <- summary(assoc.observed)$coefficients["g", c(1,2,4)] # only beta, se, p-val
-
-  # orcale ~ intercept + age + sex + 10 genetic PC + SNP_i
-  assoc.oracle <- lm(oracle ~ ., data = data.frame(
-    cbind(pheno %>% select(oracle, f.21022.0.0, f.22001.0.0, starts_with("PC")), g)
-  ))
-  out <- c(out, summary(assoc.oracle)$coefficients["g", c(1,2,4)])
-
+  
   # Bivariate model
   g_complete <- g[!is.na(g)]
   X.cov <- cbind(g_complete, (pheno %>% select(f.21022.0.0, f.22001.0.0, starts_with("PC")))[!is.na(g), ])
@@ -82,11 +69,11 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
     X = X.cov
   )
   out <- c(out, fit.binormal@Regression.tab %>%
-    filter(Outcome == "Target" & Coefficient == "g_complete") %>%
-    select(Point, SE, p) %>% as.numeric())
-	
-   vas <- c("marginal","oracle","bi")
-    vis <- c("beta", "se", "p")
+             filter(Outcome == "Target" & Coefficient == "g_complete") %>%
+             select(Point, SE, p) %>% as.numeric())
+  
+  vas <- c("marginal","bi")
+  vis <- c("beta", "se", "p")
   names(out) <- as.vector(t(outer(vas, vis, paste, sep = ".")))
   return(out)
 })
@@ -96,4 +83,4 @@ stopCluster(cl)
 results <- do.call(rbind, results)
 results <- data.frame(results)
 
-saveRDS(results, file = paste0("binormal_field=", field_id, "_nmissing=",missing_rate, ".rds"))
+saveRDS(results, file = paste0("binormal_field=", field_id, "_analysis.rds"))
