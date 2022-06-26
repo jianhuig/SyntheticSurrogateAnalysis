@@ -69,7 +69,9 @@ betas %>%
   geom_smooth(method = "lm", color = "red") +
   geom_abline(intercept = 0, slope = 1, color = "grey") +
   facet_wrap(. ~ rho) +
-  ggtitle("Missing Rate = 25%")
+  ggtitle("Missing Rate = 25%") +
+  xlab(expression(beta[target])) + 
+  ylab(expression(beta[bivariate]))
 ```
 
 ```{r}
@@ -82,7 +84,9 @@ betas %>%
   geom_smooth(method = "lm", color = "red") +
     geom_abline(intercept = 0, slope = 1, color = "grey") +
   facet_wrap(. ~ missing) +
-  ggtitle("rho = 0.25")
+  ggtitle(expression(rho  ~ "= 0.25"))+
+  xlab(expression(beta[target])) + 
+  ylab(expression(beta[bivariate]))
 ```
 
 ## Supplementary Figs/Tables
