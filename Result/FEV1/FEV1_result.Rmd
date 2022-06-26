@@ -36,11 +36,23 @@ The following QC steps are conducted
 After QC steps and removing individuals with missing age, sex, or phenotype height, 408207 samples and 211,587 genetic markers remained.
 
 ## FEV1 Prediction
+
+
+
 In total, 25697 individuals were removed in the association analysis due to being first-degree relatives with other people. After excluding people with missing weight, 23030 remaining individuals served as training set. The covariates are age, sex, waist circumference, hip circumference, height, smoking status, BMI, basal metabolic rate and impedance of whole body.
+
+```{r}
+temp <- read.table(file = "/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/FEV1.tab", header = TRUE)
+yhat <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/prediected_20150.rds")
+temp %>% inner_join(yhat) %>% ggplot(aes(x = f.20150.0.0, y = yhat)) + geom_point() + geom_abline(slope = 1, col = 'red') + xlab("Observed FEV1") + ylab("Predicted FEV1") + ggtitle("Random Forest Prediction")
+```
+
+
+
 
 # Relative efficiency
 ```{r}
-id <- 3063
+id <- 20150
 
 result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", 0, ".rds"))
 
