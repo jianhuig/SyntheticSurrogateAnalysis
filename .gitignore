@@ -1,3 +1,6 @@
-.DS_Store
-.Rhistory
-Data/
+*.RData
+*.Rhistory
+*.tab
+*.DS_Store
+*Data/
+*.gitignore
