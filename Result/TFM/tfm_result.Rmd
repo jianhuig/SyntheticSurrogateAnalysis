@@ -1,0 +1,81 @@
+---
+title: "Bone Mineral Density"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+setwd("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/")
+library(ggplot2)
+library(dplyr)
+```
+
+# Description
+## UK Biobank Population
+
+The data release contains genotypes of 488,377 UK Biobank participants, and 825,927 markers are genotyped.
+
+## Quality control
+
+The following QC steps are conducted
+
+-   Exclude inviduals with \> 10% missing genotypes.
+
+-   Exclude SNPs with maf \< 0.05
+
+-   Include only SNPs with a 90% genotyping rate
+
+-   Exclude markers that failure the Hardy-Weinberg test at 0.001
+
+-   Include only White-British population ( Code 1001 in Data field 21000, self reported)
+
+-   LD pruning. Window size = 50 SNPs, pairwise LD \> 0.5 is removed.
+
+-   Exclude one member of each pair of samples with kinship coefficient greater than 0.117. (First degree relatives are removed)
+
+After QC steps and removing individuals with missing age, sex, or phenotype height, 408207 samples and 211,587 genetic markers remained.
+
+## Trunk Fat Mass Prediction
+In total, 25697 individuals were removed in the association analysis due to being first-degree relatives with other people. After excluding people with missing trunk fat mass, 144 remaining individuals served as training set. The covariates are age, sex, weight, BMI and trunk fat mass impedance measure. 
+
+```{r}
+temp <- read.table(file = "/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/TFM.tab", header = TRUE)
+yhat <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/prediected_23284.rds")
+temp %>% inner_join(yhat) %>% ggplot(aes(x = f.23284.0.0/1000, y = yhat/1000)) + geom_point() + geom_abline(slope = 1, col = 'red') + xlab("Observed BMD") + ylab("yhat") + ggtitle("Random Forest Prediction")
+```
+
+
+# Relative efficiency
+```{r}
+id <- 23284
+
+result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_analysis.rds"))
+
+chisq.marginal <- (as.numeric(result$marginal.beta)/as.numeric(result$marginal.se))^2
+chisq.bi <- (as.numeric(result$bi.beta)/as.numeric(result$bi.se))^2
+
+cat("Avg Chisq of marginal:", mean(chisq.marginal), "\n")
+cat("Avg Chisq of binomial:", mean(chisq.bi), "\n")
+```
+
+# Estimated Effect Size
+```{r}
+result %>% ggplot(aes(x = as.numeric(marginal.beta), y = as.numeric(bi.beta))) + geom_point() + geom_abline(intercept = 0, slope = 1)
+```
+
+# New Discovery
+
+```{r}
+result$bi.p <- as.numeric(result$bi.p)
+result$marginal.p <- as.numeric(result$marginal.p)
+sum(result$bi.p[-which(result$marginal.p<5e-8)]<5e-8)
+```
+
+# Manhatthan plot
+```{r}
+library(qqman)
+result$chr <- as.numeric(result$chr)
+manhattan(result %>% filter(marginal.p>0), chr = "chr", bp = "pos", p = "marginal.p", snp = "rsid", suggestiveline = FALSE, main = "Marginal")
+manhattan(result %>% filter(bi.p>0), chr = "chr", bp = "pos", p = "bi.p", snp = "rsid", suggestiveline = FALSE, main = "Synethic Surrogate", highlight = result %>% filter(bi.p < 5e-8 & marginal.p > 5e-8) %>% pull(rsid))
+```
+
