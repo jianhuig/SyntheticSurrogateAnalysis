@@ -292,7 +292,7 @@ TabulateSim <- function(sim) {
 
 # Simulation with correctly specified imputation model.
 set.seed(101)
-sim <- Sim(reps = 1e2)
+sim <- Sim(reps = 1e3)
 
 # Boxplots.
 q <- PlotSim(sim)
@@ -301,3 +301,10 @@ show(q)
 # Tabulate results.
 tab <- TabulateSim(sim)
 show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind( apply(sim[, c(1,3,5)], 2, sd),
+                  apply(sim[, c(2,4,6)], 2, mean)
+                 )
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
