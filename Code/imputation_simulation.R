@@ -192,7 +192,7 @@ Sim <- function(n = 1e3, reps = 1e3) {
     
     # Oracle estimator.
     oracle_est <- EstBetaG(
-      covar = data[, c("x", "z")],
+      covar = data[, c("x")], # Only use x for the inference model.
       geno = data$g,
       outcome = data$y
     )
