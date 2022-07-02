@@ -1,0 +1,309 @@
+---
+title: "SimResult"
+author: "Jianhui Gao"
+date: "7/1/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache=TRUE)
+source("~/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Code/imputation_simulation.R")
+```
+
+# Simulation Parameter
+
+
+
+# Single Imputation
+
+## Beta known, model correctly specified
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(1, -0.5, 0.5), cov = c("g","x","z"),single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+## Beta known, model incorrectly specified
+
+$\hat{Y} \sim G, X$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(1, -0.5), cov = c("g","x"),single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+$\hat{Y} \sim X, Z$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(-0.5, 0.5), cov = c("x", "z"),single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+# Beta unkown and correctly specified
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x", "z"),single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+# Beta unkown and incorrectly specified
+
+$\hat{Y} \sim G, X$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x"), single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+$\hat{Y} \sim X, Z$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("x", "z"), single = TRUE)
+
+# Boxplots.
+q <- PlotSim(sim, single = TRUE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+tab$estimator <- c("si", "obs", "oracle")
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+colnames(se_comp) <- c("si", "obs", "oracle")
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+# Multiple Imputation 
+## Beta known, model correctly specified
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(1, -0.5, 0.5), cov = c("g","x","z"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+## Beta known, model incorrectly specified
+
+$\hat{Y} \sim G + X$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(1, -0.5), cov = c("g","x"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+$\hat{Y} \sim X + Z$
+
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = c(-0.5, 0.5), cov = c("x","z"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+## Beta unknown, model correctly specified
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x", "z"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+## Beta unknown, model incorrectly specified
+
+$\hat{Y} \sim G + X$
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
+
+$\hat{Y} \sim X + Z$
+```{r}
+set.seed(101)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("x","z"),single = FALSE)
+
+# Boxplots.
+q <- PlotSim(sim, single = FALSE)
+show(q)
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+
+# Compare empirical standard error to estimated standard error.
+se_comp <- rbind(
+  apply(sim[, c(1, 3, 5)], 2, sd),
+  apply(sim[, c(2, 4, 6)], 2, mean)
+)
+rownames(se_comp) <- c("empirical", "estimated")
+print(se_comp)
+```
