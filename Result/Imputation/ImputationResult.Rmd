@@ -12,6 +12,10 @@ source("~/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/Synthet
 
 # Simulation Parameter
 
+- sample size n = 1000
+- number of replicates = 1000
+- $Y = G -0.5 X + 0.5 Z + \epsilon$, where $G \sim Bin(2, maf = 0.25), \begin{bmatrix} X \\ Z  \end{bmatrix} \sim N \Big(\begin{bmatrix} 0 \\ 0  \end{bmatrix}, \begin{bmatrix} 1 & \rho \\ \rho & 1  \end{bmatrix}\Big), \epsilon \sim N(0, 1).$
+- Missing rate of $Y$ is 20%.
 
 
 # Single Imputation
