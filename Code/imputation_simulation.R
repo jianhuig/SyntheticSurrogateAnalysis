@@ -142,7 +142,7 @@ EstBetaG <- function(covar, geno, outcome) {
 #' @return Numeric vector containing the estimate "est" and standard error "se".
 MI <- function(data,
                imp_param = NULL,
-               n_imp = 20,
+               n_imp = 10,
                cov = c("g", "x", "z"),
                beta = NULL) {
 
