@@ -39,7 +39,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
@@ -66,7 +66,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
@@ -91,7 +91,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
@@ -116,7 +116,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
@@ -143,7 +143,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
@@ -168,7 +168,7 @@ se_comp <- rbind(
   apply(sim[, c(1, 3, 5)], 2, sd),
   apply(sim[, c(2, 4, 6)], 2, mean)
 )
-colnames(se_comp) <- c("si", "obs", "oracle")
+colnames(se_comp) <- c("oracle", "observed", "single imputation")
 rownames(se_comp) <- c("empirical", "estimated")
 print(se_comp)
 ```
