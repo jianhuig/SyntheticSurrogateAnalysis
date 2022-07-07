@@ -45,9 +45,9 @@ rf_prediction <- function(data, field, model) {
 }
 
 # ========================== Run Model =========================================
-field_id <- 3063
+field_id <- 23283
 combined <- split_data(
-  file = "FEV1.tab", field = field_id,
+  file = "TotalMass.tab", field = field_id,
   in_id_file = "in.id.rds", out_id_file = "out.id.rds"
 )
 model.rf <- rf(data = combined$train, field = field_id)
@@ -59,7 +59,7 @@ y_pred <- data.frame(
     model = model.rf
   )
 )
-saveRDS(y_pred, file = paste0("prediected_", field_id, ".rds")) # prediction data
+saveRDS(y_pred, file = paste0("predicted_", field_id, ".rds")) # prediction data
 
 # ==========================Make Plot ==========================================
 phenotype <- "FEV1"
