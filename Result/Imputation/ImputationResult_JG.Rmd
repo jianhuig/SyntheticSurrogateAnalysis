@@ -23,7 +23,7 @@ source("~/Documents/GitHub/SyntheticSurrogateAnalysis/code/imputation_simulation
 
 ```{r}
 set.seed(101)
-sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x", "z"),single = TRUE)
+sim <- Sim(reps = 1e3, beta = NULL, cov = c("g","x", "z"), single = TRUE)
 
 # Boxplots.
 q <- PlotSim(sim, single = TRUE)
@@ -48,7 +48,7 @@ print(se_comp)
 ## Beta known, model correctly specified
 ```{r}
 set.seed(101)
-sim <- Sim(reps = 1e3, beta = c(1, -0.5, 0.5), cov = c("g","x","z"),single = FALSE)
+sim <- Sim(reps = 1e3, beta = c(1, -0.5, 0.5), cov = c("g","x","z"), single = FALSE)
 
 # Boxplots.
 q <- PlotSim(sim, single = FALSE)

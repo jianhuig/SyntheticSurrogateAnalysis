@@ -209,6 +209,11 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
       train_data <- DGP(n)
       imp_param <- FitImpModel(train_data, cov = cov)
       
+      # Multiple imputation estimator.
+      mi_est <- MI(data, imp_param, cov = cov, beta = NULL)
+      names(mi_est) <- paste0("mi_", names(mi_est))
+    } else {
+      # Single imputation estimator.
       if(isTRUE(single)){
         temp <- GenSingleImp(data = data, imp_param = NULL, cov = cov, beta = beta)
         mi_est <- EstBetaG(
@@ -220,10 +225,8 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
         # Multiple imputation estimator.
         mi_est <- MI(data, imp_param = NULL, cov = cov, beta = beta)
       }
-      
-    } 
       names(mi_est) <- paste0("mi_", names(mi_est))
-    
+    }
     
     out <- c(oracle_est, obs_est, mi_est)
     return(out)
@@ -307,7 +310,6 @@ TabulateSim <- function(sim) {
     dplyr::inner_join(se, by = "estimator")
   return(tab)
 }
-
 
 
 
