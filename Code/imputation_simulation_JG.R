@@ -209,11 +209,6 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
       train_data <- DGP(n)
       imp_param <- FitImpModel(train_data, cov = cov)
       
-      # Multiple imputation estimator.
-      mi_est <- MI(data, imp_param, cov = cov, beta = NULL)
-      names(mi_est) <- paste0("mi_", names(mi_est))
-    } else {
-      # Single imputation estimator.
       if(isTRUE(single)){
         temp <- GenSingleImp(data = data, imp_param = NULL, cov = cov, beta = beta)
         mi_est <- EstBetaG(
@@ -225,8 +220,10 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
         # Multiple imputation estimator.
         mi_est <- MI(data, imp_param = NULL, cov = cov, beta = beta)
       }
+      
+    } 
       names(mi_est) <- paste0("mi_", names(mi_est))
-    }
+    
     
     out <- c(oracle_est, obs_est, mi_est)
     return(out)
@@ -312,87 +309,5 @@ TabulateSim <- function(sim) {
 }
 
 
-# -----------------------------------------------------------------------------
-# Simulation with correctly specified imputation model.
-# set.seed(101)
-# sim <- Sim(reps = 1e3)
-# 
-# # Boxplots.
-# q <- PlotSim(sim)
-# show(q)
-# 
-# # Tabulate results.
-# tab <- TabulateSim(sim)
-# show(tab)
-# 
-# # Compare empirical standard error to estimated standard error.
-# se_comp <- rbind(
-#   apply(sim[, c(1, 3, 5)], 2, sd),
-#   apply(sim[, c(2, 4, 6)], 2, mean)
-# )
-# rownames(se_comp) <- c("empirical", "estimated")
-# print(se_comp)
-# 
-# # Simulation with incorrectly specified imputation model 1:
-# # Y ~ X + G
-# set.seed(101)
-# sim <- Sim(reps = 1e3, cov = c("g", "x"))
-# 
-# # Boxplots.
-# q <- PlotSim(sim)
-# show(q)
-# 
-# # Tabulate results.
-# tab <- TabulateSim(sim)
-# show(tab)
-# 
-# # Compare empirical standard error to estimated standard error.
-# se_comp <- rbind(
-#   apply(sim[, c(1, 3, 5)], 2, sd),
-#   apply(sim[, c(2, 4, 6)], 2, mean)
-# )
-# rownames(se_comp) <- c("empirical", "estimated")
-# print(se_comp)
-# 
-# # Simulation with incorrectly specified imputation model 2:
-# # Y ~ X + Z
-# set.seed(101)
-# sim <- Sim(reps = 1e3, cov = c("z", "x"))
-# 
-# # Boxplots.
-# q <- PlotSim(sim)
-# show(q)
-# 
-# # Tabulate results.
-# tab <- TabulateSim(sim)
-# show(tab)
-# 
-# # Compare empirical standard error to estimated standard error.
-# se_comp <- rbind(
-#   apply(sim[, c(1, 3, 5)], 2, sd),
-#   apply(sim[, c(2, 4, 6)], 2, mean)
-# )
-# rownames(se_comp) <- c("empirical", "estimated")
-# print(se_comp)
-# 
-# # Simulation with correctly specified known model
-# set.seed(101)
-# sim <- Sim(reps = 1e3, beta = c(1, -0.5, 0.5), cov = c("g","x","z"))
-# 
-# # Boxplots.
-# q <- PlotSim(sim)
-# show(q)
-# 
-# # Tabulate results.
-# tab <- TabulateSim(sim)
-# show(tab)
-# 
-# # Compare empirical standard error to estimated standard error.
-# se_comp <- rbind(
-#   apply(sim[, c(1, 3, 5)], 2, sd),
-#   apply(sim[, c(2, 4, 6)], 2, mean)
-# )
-# rownames(se_comp) <- c("empirical", "estimated")
-# print(se_comp)
 
 
