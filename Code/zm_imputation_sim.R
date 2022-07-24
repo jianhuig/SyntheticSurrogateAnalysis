@@ -1,11 +1,12 @@
 #' Purpose: Examine bias and variance of multiple imputation procedure
 #' under correct and incorrect model specification.
-#' Updated: 2022-07-23
+#' Updated: 2022-07-24
 setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
 
 library(dplyr)
 library(ggplot2)
 library(ggsci)
+library(RNOmni)
 library(SurrogateRegression)
 
 # -----------------------------------------------------------------------------
@@ -35,9 +36,11 @@ Sim <- function(n = 1e3, reps = 1e3) {
   # 1. Correclty specified, including (G, X, Z).
   # 2. Misspecified: including (X, Z).
   # 3. Misspecified: including (G, X).
+
   # For each inner loop, the following estimates are calculated:
   # 1. Single imputation.
   # 2. Multiple imputation.
+  # 3. Synthetic surrogate.
   
   outer_loop <- lapply(seq_len(reps), function(i) {
     
@@ -348,6 +351,7 @@ SynSurrEst <- function(
     as.matrix()
   design <- cbind(1, design)
   yhat <- design %*% imp_param$coef
+  yhat <- RankNorm()
   
   # SynSurr estimator.
   fit <- SurrogateRegression::Fit.BNLS(
