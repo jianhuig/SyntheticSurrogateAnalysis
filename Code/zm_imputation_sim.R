@@ -1,6 +1,6 @@
 #' Purpose: Examine bias and variance of multiple imputation procedure
 #' under correct and incorrect model specification.
-#' Updated: 2022-07-24
+#' Updated: 2022-07-25
 setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
 
 library(dplyr)
@@ -21,9 +21,9 @@ Sim <- function(n = 1e3, reps = 1e3) {
   
   # Imputation scenarios, listing which covariates to include.
   scenarios <- list(
-    c("g", "x", "z"),
-    c("x", "z"),
-    c("g", "x")
+    c("g", "x"),
+    c("g"),
+    c("x")
   )
   
   # Outer loop iterates over realizations of the data.
@@ -33,9 +33,9 @@ Sim <- function(n = 1e3, reps = 1e3) {
   # Note that these estimators do not depend on the imputation procedure.
   
   # Next, an inner loop iterates over imputation models:
-  # 1. Correclty specified, including (G, X, Z).
-  # 2. Misspecified: including (X, Z).
-  # 3. Misspecified: including (G, X).
+  # 1. Correclty specified, including G and X.
+  # 2. Misspecified: G only.
+  # 3. Misspecified: X only.
 
   # For each inner loop, the following estimates are calculated:
   # 1. Single imputation.
@@ -114,24 +114,22 @@ Sim <- function(n = 1e3, reps = 1e3) {
 
 #' Data Generating Process
 #' 
-#' Generate data. "g" is genotype, "x" and "z" are covariates, "y"
+#' Generate data. "g" is genotype, "x" is a covariates, "y"
 #' is the outcome, and "yobs" is the outcome after introduction of
 #' missingness.
 #' 
 #' @param n Sample size.
 #' @param bg Genetic effect size.
 #' @param bx Effect of X. 
-#' @param bz Effect of Z. 
 #' @param maf Minor allele frequency.
 #' @param miss Missingness rate.
-#' @param rho Correlation of G with covariates.
+#' @param rho Correlation of G with X
 #' @param ve Residual variance.
 #' @return Data.frame.
 DGP <- function(
     n,
     bg = 1.0,
     bx = -0.50,
-    bz = 0.50,
     maf = 0.25,
     miss = 0.25,
     rho = sqrt(0.5),
@@ -141,10 +139,9 @@ DGP <- function(
   # Genotype and covariates. G and Z have correlation rho_gz.
   g <- stats::rnorm(n)
   x <- sqrt(1 - rho^2) * stats::rnorm(n) + rho * g
-  z <- sqrt(1 - rho^2) * stats::rnorm(n) + rho * g
   
-  design <- cbind(g, x, z)
-  eta <- design %*% c(bg, bx, bz)
+  design <- cbind(g, x)
+  eta <- design %*% c(bg, bx)
   
   # Oracle outcome.
   y <- eta + stats::rnorm(n, sd = sqrt(ve))
@@ -157,7 +154,6 @@ DGP <- function(
   out <- data.frame(
     g = g,
     x = x,
-    z = z,
     y = y,
     yobs = yobs
   )
@@ -199,7 +195,7 @@ EstBetaG <- function(covar, geno, outcome) {
 #' @return Numeric vector containing "oracle_est" and "oracle_se".
 OracleEst <- function(data) {
   oracle_est <- EstBetaG(
-    covar = data[, c("x", "z")],
+    covar = data$x,
     geno = data$g,
     outcome = data$y
   )
@@ -214,7 +210,7 @@ OracleEst <- function(data) {
 #' @return Numeric vector containing "obs_est" and "obs_se".
 ObsEst <- function(data) {
   obs_est <- EstBetaG(
-    covar = data[, c("x", "z")],
+    covar = data$x,
     geno = data$g,
     outcome = data$yobs
   )
@@ -229,7 +225,7 @@ ObsEst <- function(data) {
 #' @return Numeric vector containing "si_est" and "si_se".
 ImpEst <- function(data) {
   si_est <- EstBetaG(
-    covar = data[, c("x", "z")],
+    covar = data$x,
     geno = data$g,
     outcome = data$yhat
   )
@@ -312,7 +308,7 @@ MI <- function(
   results <- lapply(seq_len(n_imp), function(i) {
     single_imp <- GenSingleImp(data, imp_param)
     est <- EstBetaG(
-      covar = single_imp[, c("x", "z")],
+      covar = single_imp$x,
       geno = single_imp$g,
       outcome = single_imp$yhat
     )
@@ -351,13 +347,13 @@ SynSurrEst <- function(
     as.matrix()
   design <- cbind(1, design)
   yhat <- design %*% imp_param$coef
-  yhat <- RankNorm()
+  yhat <- RankNorm(as.numeric(yhat))
   
   # SynSurr estimator.
   fit <- SurrogateRegression::Fit.BNLS(
     t = data$yobs,
     s = yhat, 
-    X = data[, c("g", "x", "z")],
+    X = data[, c("g", "x")],
   )
   param <- coef(fit, type = "Target")
   
@@ -385,45 +381,45 @@ PlotSim <- function(sim) {
       upper = est + 2 * se
     )
   df$x <- c(
+    "mi_g",
     "mi_gx",
-    "mi_gxz",
-    "mi_xz",
+    "mi_x",
     "obs",
     "oracle",
+    "si_g",
     "si_gx",
-    "si_gxz",
-    "si_xz",
+    "si_x",
+    "ss_g",
     "ss_gx",
-    "ss_gxz",
-    "ss_xz"
+    "ss_x"
   )
   df$x <- factor(
     df$x,
     levels = c(
       "oracle",
       "obs",
-      "mi_gxz",
-      "si_gxz",
-      "ss_gxz",
       "mi_gx",
       "si_gx",
       "ss_gx",
-      "mi_xz",
-      "si_xz",
-      "ss_xz"
+      "mi_g",
+      "si_g",
+      "ss_g",
+      "mi_x",
+      "si_x",
+      "ss_x"
     ),
     labels = c(
       "Oracle",
       "Marginal",
-      "MI\n(G,X,U)",
-      "SI\n(G,X,U)",
-      "SS\n(G,X,U)",
       "MI\n(G,X)",
       "SI\n(G,X)",
       "SS\n(G,X)",
-      "MI\n(X,U)",
-      "SI\n(X,U)",
-      "SS\n(X,U)"
+      "MI\n(G)",
+      "SI\n(G)",
+      "SS\n(G)",
+      "MI\n(X)",
+      "SI\n(X)",
+      "SS\n(X)"
     ),
     ordered = TRUE
   )
