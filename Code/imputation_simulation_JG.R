@@ -208,11 +208,10 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
     if (is.null(beta)) {
       train_data <- DGP(n)
       imp_param <- FitImpModel(train_data, cov = cov)
-      
-      # Multiple imputation estimator.
-      mi_est <- MI(data, imp_param, cov = cov, beta = NULL)
-      names(mi_est) <- paste0("mi_", names(mi_est))
-    } else {
+      beta <- imp_param$coef
+     
+    } 
+    
       # Single imputation estimator.
       if(isTRUE(single)){
         temp <- GenSingleImp(data = data, imp_param = NULL, cov = cov, beta = beta)
@@ -226,7 +225,7 @@ Sim <- function(n = 1e3, reps = 1e3, cov = c("g", "x", "z"), beta = NULL, single
         mi_est <- MI(data, imp_param = NULL, cov = cov, beta = beta)
       }
       names(mi_est) <- paste0("mi_", names(mi_est))
-    }
+    
     
     out <- c(oracle_est, obs_est, mi_est)
     return(out)
