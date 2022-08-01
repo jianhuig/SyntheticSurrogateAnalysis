@@ -182,6 +182,40 @@ print(xtable(t1e_power_table), sanitize.colnames.function = identity)
 ```
 
 ```{r}
+# Figure for main text with power curves
+
+missing_names <- c(`0` = "Missing Rate = 0%",
+                    `0.25` = "Missing Rate = 25%",
+                    `0.5` = "Missing Rate = 50%",
+                    `0.75` = "Missing Rate = 75%"
+                    )
+
+
+power_plot <- power %>%
+  ggplot(aes(
+    x = h2*100, y = power, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(.~missing, labeller = as_labeller(missing_names))+
+  xlab("SNP Heritability (%)") +
+  ylab("Power") +
+  guides(color = guide_legend(title = expression(rho))) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
+
+ggsave(
+      plot = power_plot,
+      filename = "t1e_power_power_curves.png",
+      device = "png",
+      height = 6,
+      width = 7.5,
+      units = "in",
+      dpi = 360
+    )
+```
+
+```{r}
 # Figure 1 for efficiency analysis
 color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
 biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
@@ -209,7 +243,6 @@ re_plot <- re %>%
       units = "in",
       dpi = 360
     )
-    
 ```
 
 
@@ -228,7 +261,7 @@ re_h2_plot <- re %>% ggplot(aes(x = h2*100, y = re, group = rho, color = factor(
   geom_line() +
   facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
   scale_color_manual(name = expression(rho), values = biv_palette) +
-  xlab("Heritability") +
+  xlab("SNP Heritability (%)") +
   ylab("Relative Efficiency") 
 
  ggsave(
