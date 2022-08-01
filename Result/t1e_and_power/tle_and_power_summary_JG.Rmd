@@ -9,7 +9,9 @@ output: pdf_document
 library(dplyr)
 library(ggplot2)
 knitr::opts_chunk$set(echo = FALSE)
-source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/SynSurrogateSim.R")
+# To obtain results for this analysis please run:
+# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/t1e.R")
+# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/power.R")
 ```
 
 
