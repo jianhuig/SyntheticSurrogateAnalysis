@@ -53,7 +53,8 @@ t1e <- readRDS("~/Desktop/t1e.rds")
 # c("oracle.beta", "oracle.se", "oracle.p", "marginal.beta",
                # " marginal.se", " marginal.p", "SynSurr.beta", " SynSurr.se",
                 # " SynSurr.p")
-prop <- c()
+
+prop <- c() # call this tl1_table - in general variable name should tell you what something is
 for (m in 1:4) {
   for (j in 1:4) {
     
@@ -72,7 +73,7 @@ for (m in 1:4) {
   }
 }
 prop <- prop %>% data.frame()
-colnames(prop) <- c("mssing", "rho", "t1e rejection", "Chisq")
+colnames(prop) <- c("missing", "rho", "t1e rejection", "Chisq")
 prop %>% knitr::kable(booktabs = T, caption = "Proportion of test making type I error")
 ```
 
@@ -84,12 +85,14 @@ cal_betag <- function(h2, maf = 0.25) {
   var <- 2 * maf * (1 - maf)
   return(sqrt(h2 / (var * (1 - h2))))
 }
+
+# Please also save chi2 for power.
 result <- readRDS("~/Desktop/power.rds")
 
 #("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
 
 re <- c()
-for (i in 1:160) {
+for (i in 1:160) { # in general dont hard code , use length or something
   se.bi <- sapply(1:n.sim, function(j) result[[j]]$bi.se[i])
   se.target <- sapply(1:n.sim, function(j) result[[j]]$target.se[i])
   re <- c(re, mean((se.target / se.bi)^2))
@@ -154,5 +157,16 @@ re %>% ggplot(aes(x = h2, y = re, group = rho, color = rho)) +
 
 
 ```{r}
-# Make table with chi2, t1e + chi2 and power for snp heritability and missingness 0.5 - 0.5
+# Table for main text  chi2, t1e + chi2, power for snp heritability 0.005
+library(xtable)
+
+power_table <- round(power[power[,c("h2")] == 0.005, c("missing", "rho", 
+                                                       "power")], 2) # add chi2 when available
+t1e_table <- prop # rename above
+t1e_power_table <- inner_join(t1e_table, power_table, by = c("missing",  
+                                                             "rho"))
+
+colnames(t1e_power_table) <- c("Missing Rate (\\%)", "$\\rho$",  "Type I Error",
+                               "$\\chi^2$",   "Power")  #,  "$\\chi^2$")
+print(xtable(t1e_power_table), sanitize.colnames.function = identity)
 ```
