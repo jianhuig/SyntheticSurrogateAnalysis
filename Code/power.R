@@ -1,5 +1,5 @@
 source("SynSurrogateSim.R")
-
+# Same instructions as t1e simulation.
 library(dplyr)
 library(doParallel)
 
