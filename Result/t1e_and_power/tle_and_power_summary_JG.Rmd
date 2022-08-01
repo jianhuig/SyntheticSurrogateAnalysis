@@ -10,8 +10,8 @@ library(dplyr)
 library(ggplot2)
 knitr::opts_chunk$set(echo = FALSE)
 # To obtain results for this analysis please run:
-# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/t1e.R")
-# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/power.R")
+# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/t1e_simulation.R")
+# source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/power_simulation.R")
 ```
 
 
@@ -35,16 +35,20 @@ $$
 
 -   $maf = 0.25, X_i \sim N(0,1)$
 
--   $\alpha = \beta = 0.11$, $\beta_g = 0.11575982$
+-   $\alpha = \beta = 0.11$, $\beta_g = 0.11575982$ 
 
 -   missing rate $\in\{0, 0.25 , 0.5, 0.75\}$
 
 -   $\rho \in\{0, 0.25 , 0.5, 0.75\}$
 
+I do not think these parameters match whats in the simulation file, please confirm.  
+
 ## Type I error 
 ```{r}
-n.sim <- 10^4
-t1e <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/t1e.rds")
+n.sim <- 10^4 # I dont think this is right
+
+t1e <- readRDS("~/Desktop/t1e.rds")
+#"/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/t1e.rds")
 
 prop <- c()
 for (m in 1:4) {
