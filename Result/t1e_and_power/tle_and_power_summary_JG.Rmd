@@ -1,0 +1,135 @@
+---
+title: "Type I error and power simulation"
+author: "Jesse Gronsbell"
+date: "08/01/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = FALSE)
+source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/SynSurrogateSim.R")
+```
+
+
+## Simulation Set-up
+
+$$
+\begin{bmatrix}
+           Y_i \\
+           \hat{Y}_i 
+         \end{bmatrix}  \mid   Z_{ik} \sim N\Big(
+         \begin{bmatrix}
+           \beta_G G + \beta X_i\\
+           \alpha X_i
+         \end{bmatrix}, \begin{bmatrix}
+           1 & \rho\\
+           \rho & 1\\
+         \end{bmatrix}\Big)
+$$
+
+-   $G \sim Bin(2,maf)$
+
+-   $maf = 0.25, X_i \sim N(0,1)$
+
+-   $\alpha = \beta = 0.11$, $\beta_g = 0.11575982$
+
+-   missing rate $\in\{0, 0.25 , 0.5, 0.75\}$
+
+-   $\rho \in\{0, 0.25 , 0.5, 0.75\}$
+
+## Type I error 
+```{r}
+n.sim <- 10^4
+t1e <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/t1e.rds")
+
+prop <- c()
+for (m in 1:4) {
+  for (j in 1:4) {
+    rate <- c(0, 0.25, 0.5, 0.75)[m]
+    p <- c(0, 0.25, 0.5, 0.75)[j]
+    n <- n.sim
+
+    t1e.bi <- sum(t1e[[m]][[j]][, 9] < 0.05) / n.sim
+    chisq.bi <- mean(t1e[[m]][[j]][, 7]^2 / t1e[[m]][[j]][, 8]^2)
+
+    prop <- rbind(prop, c(rate, p, t1e.bi, chisq.bi))
+  }
+}
+prop <- prop %>% data.frame()
+colnames(prop) <- c("mssing", "rho", "t1e rejection", "Chisq")
+prop %>% knitr::kable(booktabs = T, caption = "Proportion of test making type I error")
+```
+
+## Increased Power relative to baseline GWAS
+
+```{r}
+# calculate beta_g
+cal_betag <- function(h2, maf = 0.25) {
+  var <- 2 * maf * (1 - maf)
+  return(sqrt(h2 / (var * (1 - h2))))
+}
+result <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
+re <- c()
+for (i in 1:160) {
+  se.bi <- sapply(1:n.sim, function(j) result[[j]]$bi.se[i])
+  se.target <- sapply(1:n.sim, function(j) result[[j]]$target.se[i])
+  re <- c(re, mean((se.target / se.bi)^2))
+}
+
+missing_rate <- c(0, 0.25, 0.5, 0.75)
+rho <- c(0, 0.25, 0.5, 0.75)
+beta_g <- sapply(seq(0.001, 0.01, 0.001), function(x) cal_betag(h2 = x))
+para <- expand.grid(missing_rate, rho, beta_g)
+re <- cbind(para, re)
+colnames(re) <- c("missing", "rho", "beta_g", "re")
+re$h2 <- re$beta_g^2 * 0.375 / (re$beta_g^2 * 0.375 + 1)
+
+re %>%
+  filter(h2 == 0.005) %>%
+  ggplot(aes(
+    x = missing, y = re, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  xlab("Missing Rate") +
+  ylab("RE (bivariate vs baseline GWAS)") +
+  guides(color = guide_legend(title = "rho")) +
+  ggtitle("SNP-heritability = 0.5%")
+```
+
+## Power as a function of heritability
+```{r}
+power <- c()
+for (i in 1:160) {
+  p.bi <- sapply(1:n.sim, function(j) result[[j]]$bi.p[i])
+  power <- c(power, mean(p.bi < 0.05))
+}
+power <- cbind(para, power)
+colnames(power) <- c("missing", "rho", "beta_g", "power")
+power$h2 <- power$beta_g^2 * 0.375 / (power$beta_g^2 * 0.375 + 1)
+
+power %>%
+  ggplot(aes(
+    x = h2*100, y = power, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(.~missing)+
+  xlab("SNP Heritability (%)") +
+  ylab("Power") +
+  guides(color = guide_legend(title = "rho")) +
+  ggtitle("Power of bivariate regression, stratified by percent of missing lables")
+```
+
+Unlike the previous plot, SNP heritability plays no role in relative efficiency. 
+
+```{r}
+re %>% ggplot(aes(x = h2, y = re, group = rho, color = rho)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(. ~ missing)
+```
