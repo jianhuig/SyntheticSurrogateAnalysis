@@ -105,20 +105,30 @@ para <- expand.grid(missing_rate, rho, beta_g)
 re <- cbind(para, re)
 colnames(re) <- c("missing", "rho", "beta_g", "re")
 re$h2 <- re$beta_g^2 * 0.375 / (re$beta_g^2 * 0.375 + 1)
+```
+
+```{r}
+# Figure for efficiency analysis
+color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
+biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
+
 
 re %>%
   filter(h2 == 0.005) %>%
   ggplot(aes(
-    x = missing, y = re, group = rho,
+    x = 100*missing, y = re, group = rho,
     color = factor(rho)
   )) +
   geom_point() +
   geom_line() +
-  xlab("Missing Rate") +
-  ylab("RE (bivariate vs baseline GWAS)") +
-  guides(color = guide_legend(title = "rho")) +
-  ggtitle("SNP-heritability = 0.5%")
+  xlab("Missing Rate (%)") +
+  ylab("Relative Efficiency") +
+  guides(color = guide_legend(title = expression(rho))) +
+ #  ggtitle("SNP-heritability = 0.5%") +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
 ```
+
+
 
 ## Power as a function of heritability
 ```{r}
@@ -154,7 +164,7 @@ re %>% ggplot(aes(x = h2, y = re, group = rho, color = rho)) +
   facet_wrap(. ~ missing)
 ```
 
-
+# Tables and Figures for the Manuscript
 
 ```{r}
 # Table for main text  chi2, t1e + chi2, power for snp heritability 0.005
@@ -169,4 +179,41 @@ t1e_power_table <- inner_join(t1e_table, power_table, by = c("missing",
 colnames(t1e_power_table) <- c("Missing Rate (\\%)", "$\\rho$",  "Type I Error",
                                "$\\chi^2$",   "Power")  #,  "$\\chi^2$")
 print(xtable(t1e_power_table), sanitize.colnames.function = identity)
+```
+
+```{r}
+# Figure 1 for efficiency analysis
+color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
+biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
+
+
+re_plot <- re %>%
+  filter(h2 == 0.005) %>%
+  ggplot(aes(
+    x = 100*missing, y = re, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  xlab("Missing Rate (%)") +
+  ylab("Relative Efficiency") +
+  guides(color = guide_legend(title = expression(rho))) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
+
+ ggsave(
+      plot = re_plot,
+      filename = "t1e_power_RE.png",
+      device = "png",
+      height = 6,
+      width = 7.5,
+      units = "in",
+      dpi = 360
+    )
+    
+```
+
+
+```{r}
+# Figure 2 for efficiency analysis
+
 ```
