@@ -215,9 +215,29 @@ re_plot <- re %>%
 
 ```{r}
 # Figure 2 for efficiency analysis
-re %>% ggplot(aes(x = h2, y = re, group = rho, color = factor(rho))) +
+
+missing_names <- c(`0` = "Missing Rate = 0%",
+                    `0.25` = "Missing Rate = 25%",
+                    `0.5` = "Missing Rate = 50%",
+                    `0.75` = "Missing Rate = 75%"
+                    )
+
+
+re_h2_plot <- re %>% ggplot(aes(x = h2*100, y = re, group = rho, color = factor(rho))) +
   geom_point() +
   geom_line() +
-  facet_wrap(. ~ missing) +
-  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
+  facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
+  scale_color_manual(name = expression(rho), values = biv_palette) +
+  xlab("Heritability") +
+  ylab("Relative Efficiency") 
+
+ ggsave(
+      plot = re_h2_plot,
+      filename = "t1e_power_RE_h2.png",
+      device = "png",
+      height = 6,
+      width = 7.5,
+      units = "in",
+      dpi = 360
+    )
 ```
