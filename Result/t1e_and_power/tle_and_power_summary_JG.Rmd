@@ -215,5 +215,9 @@ re_plot <- re %>%
 
 ```{r}
 # Figure 2 for efficiency analysis
-
+re %>% ggplot(aes(x = h2, y = re, group = rho, color = factor(rho))) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(. ~ missing) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
 ```
