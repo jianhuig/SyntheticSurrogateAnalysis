@@ -45,22 +45,30 @@ I do not think these parameters match whats in the simulation file, please confi
 
 ## Type I error 
 ```{r}
-n.sim <- 10^4 # I dont think this is right
+n.sim <- 10^4
 
 t1e <- readRDS("~/Desktop/t1e.rds")
 #"/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/t1e.rds")
-
+# Fix this when you update the file.  Also follow naming convention of other files, eg. think it uses _ rather than, be consistent with variable names
+# c("oracle.beta", "oracle.se", "oracle.p", "marginal.beta",
+               # " marginal.se", " marginal.p", "SynSurr.beta", " SynSurr.se",
+                # " SynSurr.p")
 prop <- c()
 for (m in 1:4) {
   for (j in 1:4) {
+    
+    # Save these in your R data file - will avoid errors
     rate <- c(0, 0.25, 0.5, 0.75)[m]
     p <- c(0, 0.25, 0.5, 0.75)[j]
-    n <- n.sim
-
+    
+    n <- n.sim  # why not just take the length from the t1e[[m]][[j]][, 9]?
+    
+    # make 0.05 a parameter
+    # label this data frame so its clear what is happening
     t1e.bi <- sum(t1e[[m]][[j]][, 9] < 0.05) / n.sim
     chisq.bi <- mean(t1e[[m]][[j]][, 7]^2 / t1e[[m]][[j]][, 8]^2)
 
-    prop <- rbind(prop, c(rate, p, t1e.bi, chisq.bi))
+    prop <- rbind(prop, round(c(rate, p, t1e.bi, chisq.bi), 2))
   }
 }
 prop <- prop %>% data.frame()
@@ -76,7 +84,10 @@ cal_betag <- function(h2, maf = 0.25) {
   var <- 2 * maf * (1 - maf)
   return(sqrt(h2 / (var * (1 - h2))))
 }
-result <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
+result <- readRDS("~/Desktop/power.rds")
+
+#("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
+
 re <- c()
 for (i in 1:160) {
   se.bi <- sapply(1:n.sim, function(j) result[[j]]$bi.se[i])
@@ -138,4 +149,10 @@ re %>% ggplot(aes(x = h2, y = re, group = rho, color = rho)) +
   geom_point() +
   geom_line() +
   facet_wrap(. ~ missing)
+```
+
+
+
+```{r}
+# Make table with chi2, t1e + chi2 and power for snp heritability and missingness 0.5 - 0.5
 ```
