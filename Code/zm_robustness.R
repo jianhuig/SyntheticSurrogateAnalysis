@@ -1,7 +1,10 @@
 # Purpose: Demonstrate robustness to the choice of surrogate and power 
 # advantage with increasing missingness.
 # Updated: 2022-07-30
-setwd("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code")
+setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
+library(dplyr)
+library(ggplot2)
+
 
 #' Simulation
 #' 
