@@ -1,7 +1,7 @@
 # Purpose: Demonstrate robustness to the choice of surrogate and power 
 # advantage with increasing missingness.
 # Updated: 2022-07-30
-setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
+setwd("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code")
 
 #' Simulation
 #' 
@@ -18,6 +18,7 @@ Sim <- function(
     reps = 500,
     rho = 0.00
 ) {
+  
   
   # Proportion of variance explained by genotype.
   PVE_G <- 0.01

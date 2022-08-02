@@ -19,7 +19,7 @@ Sim <- function(
 ) {
   
   # Proportion of variance explained by genotype.
-  PVE_G <- 0
+  PVE_G <- 0.01
   
   # Missingness levels. miss = 0 included by default.
   MISS <- c(0.25, 0.50, 0.75)
