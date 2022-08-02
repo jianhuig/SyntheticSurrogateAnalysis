@@ -205,6 +205,7 @@ power_plot <- power %>%
   facet_wrap(.~missing, labeller = as_labeller(missing_names))+
   xlab("SNP Heritability (%)") +
   ylab("Power") +
+  ylim(0, 1) +
   guides(color = guide_legend(title = expression(rho))) +
   scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette) 
 
