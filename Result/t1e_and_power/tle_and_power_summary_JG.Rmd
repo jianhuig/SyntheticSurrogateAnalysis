@@ -178,7 +178,8 @@ t1e_power_table <- inner_join(t1e_table, power_table, by = c("missing",
 
 colnames(t1e_power_table) <- c("Missing Rate (\\%)", "$\\rho$",  "Type I Error",
                                "$\\chi^2$",   "Power")  #,  "$\\chi^2$")
-print(xtable(t1e_power_table), sanitize.colnames.function = identity)
+print(xtable(t1e_power_table), include.rownames=FALSE,
+      sanitize.colnames.function = identity)
 ```
 
 ```{r}
