@@ -175,10 +175,13 @@ power_table <- round(power[power[,c("h2")] == 0.005, c("missing", "rho",
 t1e_table <- prop # rename above
 t1e_power_table <- inner_join(t1e_table, power_table, by = c("missing",  
                                                              "rho"))
+t1e_power_table[, c('missing')] <- round(100*t1e_power_table[, c('missing')],1)
 
 colnames(t1e_power_table) <- c("Missing Rate (\\%)", "$\\rho$",  "Type I Error",
                                "$\\chi^2$",   "Power")  #,  "$\\chi^2$")
-print(xtable(t1e_power_table), include.rownames=FALSE,
+print(xtable(t1e_power_table,
+             digits=c(0, 0, rep(2, ncol(t1e_power_table) - 1))), 
+      include.rownames=FALSE,
       sanitize.colnames.function = identity)
 ```
 
