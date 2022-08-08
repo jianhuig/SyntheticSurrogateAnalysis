@@ -1,5 +1,5 @@
 # Update to style of imputation file.
-
+library(dplyr)
 #' Simulation of Type I error and power 
 #'
 #'
@@ -172,7 +172,7 @@ ObsEst <- function(data) {
 SynSurrEst <- function(data) {
   
   # SynSurr estimator.
-  fit <- SurrogateRegression::Fit.BNLS(
+  fit <- SurrogateRegression::FitBNR(
     t = data$yobs,
     s = data$s, 
     X = data[, c("g", "x")],
@@ -201,36 +201,156 @@ outer_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(RHO){
 
 t1e_result <- do.call(rbind, outer_loop)
 
-# Tabulate result
-t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
-  mutate(t1e = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
-  summarise_at(c("t1e","chisq2"), mean)
-
-# Run the power simulation.
-# pve_g = 0.12, under the alternative
-# Loop over all missing rate and rho combinations
-# Outer loop missing_rate over (0, 0.25, 0.5, 0.75)
-# Inner loop rho over (0, 0.25, 0.5, 0.75)
-outer_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(RHO){
-  inner_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(MISS){
-    Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = 0.005)
+# Run the power simulation for different SNP-heritability level
+# Unde the alternative
+snp_heritability <- seq(0.001, 0.01, 0.001)
+# Loop over all SNP-heritability, missing rate and rho combinations
+# Outer Outer loop SNP heritability over seq(0.001, 0.01, 0.001)
+# Inner loop missing_rate over (0, 0.25, 0.5, 0.75)
+# Inner inner loop rho over (0, 0.25, 0.5, 0.75)
+parallel <- TRUE
+if (!parallel) {
+  outer_loop <- lapply(snp_heritability, function(H) {
+    inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
+      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
+        Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = H)
+      })
+      do.call(rbind, inner_inner_loop)
+    })
+    do.call(rbind, inner_loop)
   })
-  do.call(rbind, inner_loop)}
-)
-
+} else {
+  cl <- parallel::makeCluster(parallel::detectCores())
+  parallel::clusterExport(cl, varlist = as.vector(lsf.str()))
+  parallel::clusterEvalQ(cl, library(dplyr))
+  outer_loop <- pbapply::pblapply(snp_heritability, function(H) {
+    inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
+      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
+        Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = H)
+      })
+      do.call(rbind, inner_inner_loop)
+    })
+    do.call(rbind, inner_loop)
+  }, cl = cl)
+  closeAllConnections()
+}
 power_result <- do.call(rbind, outer_loop)
 
-# Tabulate result
-power_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
+# -----------------------------------------------------------------------------
+# Tables and Figures for the Manuscript
+
+library(xtable)
+# Table for main text  chi2, t1e + chi2, power for snp heritability 0.005
+t1e_table <- t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
+  mutate(t1e = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
+  summarise_at(c("t1e","chisq2"), mean)
+power_table <- power_result %>% filter(method == "ss" & pve_g==0.005) %>% mutate(chisq2 = (est/se)^2) %>% 
   mutate(power = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
   summarise_at(c("power","chisq2"), mean)
+print(xtable::xtable(t1e_table %>% 
+                 inner_join(power_table, by = c("miss", "rho")) %>% 
+                   mutate(miss = miss*100) %>%
+                   setNames(c("Missing Rate (\\%)", "$\\rho$",  "Type I Error",
+                              "$\\chi^2$",   "Power", "$\\chi^2$")),
+                 digits = c(0, 0, rep(2, 5))),
+      sanitize.colnames.function = identity,
+      include.rownames = FALSE)
 
 
+# Figure for main text with power curves
+color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
+biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
+
+power_plot <- power_result %>%
+  filter(method == "ss") %>%
+  mutate(chisq2 = (est / se)^2) %>%
+  mutate(power = chisq2 > qchisq(0.95, df = 1)) %>%
+  group_by(miss, rho, pve_g) %>%
+  summarise_at("power", mean) %>%
+  ggplot(aes(
+    x = pve_g*100, y = power, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(.~miss, labeller = as_labeller(missing_names))+
+  xlab("SNP Heritability (%)") +
+  ylab("Power") +
+  ylim(0, 1) +
+  guides(color = guide_legend(title = expression(rho))) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)
+
+ggsave(
+  plot = power_plot,
+  filename = "t1e_power_power_curves.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
 
 
+# Figure 1 for efficiency analysis
+missing_names <- c(`0` = "Missing Rate = 0%",
+                   `0.25` = "Missing Rate = 25%",
+                   `0.5` = "Missing Rate = 50%",
+                   `0.75` = "Missing Rate = 75%"
+)
 
+re_plot <- power_result %>%
+  filter(!method == "oracle") %>%
+  filter(pve_g == 0.005) %>%
+  mutate(id = rep(1:(n()/2), each = 2)) %>%
+  select(-est) %>%
+  tidyr::pivot_wider(names_from = method, values_from = se) %>%
+  mutate(re = (obs/ss)^2) %>%
+  group_by(miss, rho) %>%
+  summarize_at("re", mean) %>%
+  ggplot(aes(
+    x = 100*miss, y = re, group = rho,
+    color = factor(rho)
+  )) +
+  geom_point() +
+  geom_line() +
+  xlab("Missing Rate (%)") +
+  ylab("Relative Efficiency") +
+  guides(color = guide_legend(title = expression(rho))) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)
 
+ggsave(
+  plot = re_plot,
+  filename = "t1e_power_RE.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
 
+# Figure 2 for efficiency analysis
+re_h2_plot <- power_result %>%
+  filter(!method == "oracle") %>%
+  mutate(id = rep(1:(n()/2), each = 2)) %>%
+  select(-est) %>%
+  tidyr::pivot_wider(names_from = method, values_from = se) %>%
+  mutate(re = (obs/ss)^2) %>%
+  group_by(miss, rho, pve_g) %>%
+  summarize_at("re", mean) %>%
+  ggplot(aes(x = pve_g*100, y = re, group = factor(rho), color = factor(rho))) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(. ~ miss, labeller = as_labeller(missing_names)) +
+  scale_color_manual(name = expression(rho), values = biv_palette) +
+  xlab("SNP Heritability (%)") +
+  ylab("Relative Efficiency")
 
-
-s
+ggsave(
+  plot = re_h2_plot,
+  filename = "t1e_power_RE_h2.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
