@@ -202,7 +202,9 @@ outer_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(RHO){
 t1e_result <- do.call(rbind, outer_loop)
 
 # Tabulate result
-t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% mutate(t1e = chisq2 > 3.841) %>% group_by(miss, rho) %>% summarise_at(c("t1e","chisq2"), mean)
+t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
+  mutate(t1e = chisq2 > 3.841) %>% group_by(miss, rho) %>% 
+  summarise_at(c("t1e","chisq2"), mean)
 
 # Run the power simulation.
 # pve_g = 0.12, under the alternative
@@ -219,4 +221,16 @@ outer_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(RHO){
 power_result <- do.call(rbind, outer_loop)
 
 # Tabulate result
-power_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% mutate(power = chisq2 > 3.841) %>% group_by(miss, rho) %>% summarise_at(c("power","chisq2"), mean)
+power_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
+  mutate(power = chisq2 > 3.841) %>% group_by(miss, rho) %>% 
+  summarise_at(c("power","chisq2"), mean)
+
+
+
+
+
+
+
+
+
+s
