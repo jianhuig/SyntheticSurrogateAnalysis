@@ -203,7 +203,7 @@ t1e_result <- do.call(rbind, outer_loop)
 
 # Tabulate result
 t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
-  mutate(t1e = chisq2 > 3.841) %>% group_by(miss, rho) %>% 
+  mutate(t1e = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
   summarise_at(c("t1e","chisq2"), mean)
 
 # Run the power simulation.
@@ -222,7 +222,7 @@ power_result <- do.call(rbind, outer_loop)
 
 # Tabulate result
 power_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
-  mutate(power = chisq2 > 3.841) %>% group_by(miss, rho) %>% 
+  mutate(power = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
   summarise_at(c("power","chisq2"), mean)
 
 
