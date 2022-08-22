@@ -51,17 +51,27 @@ avg_chisq <- c()
 for (i in c(0, 0.25, 0.5, 0.75)) {
   result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
   result <- result[true_snp_index, ]
-  chisq.orcale <- (result$oracle.beta/result$oracle.se)^2
-  chisq.marginal <- (result$marginal.beta/result$marginal.se)^2
-  chisq.bi <- (result$bi.beta/result$bi.se)^2
-  avg_chisq <- rbind(avg_chisq, c(mean(chisq.orcale),mean(chisq.marginal), mean(chisq.bi)))
+  chisq.orcale <- (result$oracle.beta / result$oracle.se)^2
+  chisq.marginal <- (result$marginal.beta / result$marginal.se)^2
+  chisq.bi <- (result$bi.beta / result$bi.se)^2
+  avg_chisq <- rbind(avg_chisq, c(mean(chisq.orcale), mean(chisq.marginal), mean(chisq.bi)))
 }
 colnames(avg_chisq) <- c("oracle", "marginal", "bivariate")
-avg_chisq  <- avg_chisq %>% data.frame() %>% mutate(missing = c(0, 0.25, 0.5, 0.75))
+avg_chisq <- avg_chisq %>%
+  data.frame() %>%
+  mutate(missing = c(0, 0.25, 0.5, 0.75))
 
-tidyr::gather(avg_chisq, method, chisq, colnames(avg_chisq)[1:3]) %>% ggplot(aes(x = missing, y = chisq, group = method, color = method)) + geom_point() + geom_line() + ylab(expression(Mean ~ chi^2)) + xlab("Percent of phenotype missingness")
+tidyr::gather(avg_chisq, method, chisq, colnames(avg_chisq)[1:3]) %>% ggplot(aes(x = missing, y = chisq, group = method, color = method)) +
+  geom_point() +
+  geom_line() +
+  ylab(expression(Mean ~ chi^2)) +
+  xlab("Percent of phenotype missingness")
 
-avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75), y =bivariate/marginal))+ geom_point() + geom_line() +  xlab("Rercent of phenotype missingness") + ylab("Relative efficiency")
+avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75), y = bivariate / marginal)) +
+  geom_point() +
+  geom_line() +
+  xlab("Rercent of phenotype missingness") +
+  ylab("Relative efficiency")
 ```
 
 # Estimated Effect Size
@@ -70,14 +80,63 @@ betas <- c()
 for (i in c(0, 0.25, 0.5, 0.75)) {
   result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
   result <- result[true_snp_index, ]
-  betas <- rbind( betas, cbind(i, result$oracle.beta, result$marginal.beta, result$bi.beta))
+  betas <- rbind(betas, cbind(i, result$oracle.beta, result$marginal.beta, result$bi.beta))
 }
 colnames(betas) <- c("missing", "oracle", "marginal", "bivariate")
-betas %>% data.frame() %>% tidyr::gather(method, beta, c("marginal", "bivariate")) %>% filter(method == "marginal") %>% ggplot(aes(x = oracle, y = beta)) + geom_point() + facet_wrap(. ~ missing) + xlim(c(-0.1, 0.1)) + ylim(c(-0.1, 0.1)) + geom_smooth(method = 'lm') +
-  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) + xlab("beta oracle") + ylab("beta marginal")
 
-betas %>% data.frame() %>% tidyr::gather(method, beta, c("marginal", "bivariate")) %>% filter(method == "bivariate") %>% ggplot(aes(x = oracle, y = beta)) + geom_point() + facet_wrap(. ~ missing) + xlim(c(-0.1, 0.1)) + ylim(c(-0.1, 0.1)) + geom_smooth(method = 'lm') +
-  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+ xlab("beta oracle") + ylab("beta bivariate")
+missing_names <- c(
+  `0` = "Missing Rate = 0%",
+  `0.25` = "Missing Rate = 25%",
+  `0.5` = "Missing Rate = 50%",
+  `0.75` = "Missing Rate = 75%"
+)
+plot <- betas %>%
+  data.frame() %>%
+  tidyr::gather(method, beta, c("marginal", "bivariate")) %>%
+  filter(method == "marginal") %>%
+  ggplot(aes(x = oracle, y = beta)) +
+  geom_point() +
+  facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
+  xlim(c(-0.1, 0.1)) +
+  ylim(c(-0.1, 0.1)) +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  xlab(expression(beta[oracle])) +
+  ylab(expression(beta[marginal])) +
+  theme_bw()
+ggsave(
+  plot = plot,
+  filename = "effectsize_height_marginal.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
+
+plot <- betas %>%
+  data.frame() %>%
+  tidyr::gather(method, beta, c("marginal", "bivariate")) %>%
+  filter(method == "bivariate") %>%
+  ggplot(aes(x = oracle, y = beta)) +
+  geom_point() +
+  facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
+  xlim(c(-0.1, 0.1)) +
+  ylim(c(-0.1, 0.1)) +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  xlab(expression(beta[oracle])) +
+  ylab(expression(beta[SynSurr])) +
+  theme_bw()
+ggsave(
+  plot = plot,
+  filename = "effectsize_height.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
 ```
 
 # FN and FP
@@ -85,13 +144,16 @@ betas %>% data.frame() %>% tidyr::gather(method, beta, c("marginal", "bivariate"
 metric <- c()
 for (i in c(0, 0.25, 0.5, 0.75)) {
   result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
-  metric <- rbind(metric, c(i, 
-                            mean(result$marginal.p[true_snp_index] > 5e-8),
-                            mean(result$marginal.p[-true_snp_index] < 5e-8),
-              mean(result$bi.p[true_snp_index] > 5e-8),
-              mean(result$bi.p[-true_snp_index] < 5e-8)))
+  metric <- rbind(metric, c(
+    i,
+    mean(result$marginal.p[true_snp_index] > 5e-8),
+    mean(result$marginal.p[-true_snp_index] < 5e-8),
+    mean(result$bi.p[true_snp_index] > 5e-8),
+    mean(result$bi.p[-true_snp_index] < 5e-8)
+  ))
 }
-colnames(metric)  <- c("missing", "FNR:marginal", "FPR:marginal", "FNR:binormal", "FPR:binormal")
-metric %>% data.frame() %>% knitr::kable(booktaps = TRUE)
+colnames(metric) <- c("missing", "FNR:marginal", "FPR:marginal", "FNR:binormal", "FPR:binormal")
+metric %>%
+  data.frame() %>%
+  knitr::kable(booktaps = TRUE)
 ```
-

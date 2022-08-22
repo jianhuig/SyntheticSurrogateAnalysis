@@ -12,7 +12,7 @@ library(dplyr)
 Sim <- function(n = 1e3, reps = 1e3, missing_rate = 0,
                 rho = 0, pve_g) {
   
-  outer_loop <- lapply(seq_len(reps), function(i) {
+  outer_loop <- parallel::mclapply(seq_len(reps), function(i) {
     
     # Generate data under the null
     data <- DGP(n0 = n, miss = missing_rate, rho = rho, pve_g = pve_g)
@@ -33,6 +33,7 @@ Sim <- function(n = 1e3, reps = 1e3, missing_rate = 0,
       miss = missing_rate,
       rho = rho,
       method = c("oracle", "obs", "ss"),
+      pve_g = pve_g,
       est = ests[, 1],
       se = ests[, 2],
       row.names = NULL
@@ -192,9 +193,9 @@ SynSurrEst <- function(data) {
 # Loop over all missing rate and rho combinations
 # Outer loop missing_rate over (0, 0.25, 0.5, 0.75)
 # Inner loop rho over (0, 0.25, 0.5, 0.75)
-outer_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(RHO){
+outer_loop <- pbapply::pblapply(c(0, 0.25, 0.5, 0.75),function(RHO){
   inner_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(MISS){
-    Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = 0)
+    Sim(n = 1e3, reps = 1e5, missing_rate = MISS, rho = RHO, pve_g = 0)
   })
   do.call(rbind, inner_loop)}
 )
@@ -208,12 +209,12 @@ snp_heritability <- seq(0.001, 0.01, 0.001)
 # Outer Outer loop SNP heritability over seq(0.001, 0.01, 0.001)
 # Inner loop missing_rate over (0, 0.25, 0.5, 0.75)
 # Inner inner loop rho over (0, 0.25, 0.5, 0.75)
-parallel <- TRUE
+parallel <- FALSE
 if (!parallel) {
-  outer_loop <- lapply(snp_heritability, function(H) {
+  outer_loop <- pbapply::pblapply(snp_heritability, function(H) {
     inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
       inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
-        Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = H)
+        Sim(n = 1e3, reps = 1e4, missing_rate = MISS, rho = RHO, pve_g = H)
       })
       do.call(rbind, inner_inner_loop)
     })
@@ -226,7 +227,7 @@ if (!parallel) {
   outer_loop <- pbapply::pblapply(snp_heritability, function(H) {
     inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
       inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
-        Sim(n = 1e3, reps = 1e3, missing_rate = MISS, rho = RHO, pve_g = H)
+        Sim(n = 1e3, reps = 1e4, missing_rate = MISS, rho = RHO, pve_g = H)
       })
       do.call(rbind, inner_inner_loop)
     })
@@ -244,9 +245,10 @@ library(xtable)
 t1e_table <- t1e_result %>% filter(method == "ss") %>% mutate(chisq2 = (est/se)^2) %>% 
   mutate(t1e = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
   summarise_at(c("t1e","chisq2"), mean)
+
 power_table <- power_result %>% filter(method == "ss" & pve_g==0.005) %>% mutate(chisq2 = (est/se)^2) %>% 
-  mutate(power = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% 
-  summarise_at(c("power","chisq2"), mean)
+  mutate(power = chisq2 > qchisq(0.95, df = 1)) %>% group_by(miss, rho) %>% summarise_at(c("power","chisq2"), mean)
+
 print(xtable::xtable(t1e_table %>% 
                  inner_join(power_table, by = c("miss", "rho")) %>% 
                    mutate(miss = miss*100) %>%
@@ -278,7 +280,7 @@ power_plot <- power_result %>%
   ylab("Power") +
   ylim(0, 1) +
   guides(color = guide_legend(title = expression(rho))) +
-  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+ theme_bw()
 
 ggsave(
   plot = power_plot,
@@ -316,7 +318,7 @@ re_plot <- power_result %>%
   xlab("Missing Rate (%)") +
   ylab("Relative Efficiency") +
   guides(color = guide_legend(title = expression(rho))) +
-  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+theme_bw()
 
 ggsave(
   plot = re_plot,
@@ -343,7 +345,7 @@ re_h2_plot <- power_result %>%
   facet_wrap(. ~ miss, labeller = as_labeller(missing_names)) +
   scale_color_manual(name = expression(rho), values = biv_palette) +
   xlab("SNP Heritability (%)") +
-  ylab("Relative Efficiency")
+  ylab("Relative Efficiency")+theme_bw()
 
 ggsave(
   plot = re_h2_plot,
