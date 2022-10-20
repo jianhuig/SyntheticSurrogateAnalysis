@@ -6,8 +6,8 @@ library(BEDMatrix)
 
 create_missing_phenotypes <- function(field, in_id_file, rate, seed = 123) {
   temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
-  in_id <- readRDS(in_id_file)
-  temp <- temp %>% filter(f.eid %in% in_id) %>% filter(!is.na(int))
+  in_id <- fread("final.king.cutoff.in.id") %>% rename(f.eid = `#FID`) %>% select(-IID)
+  temp <- temp %>% inner_join(in_id) %>% filter(!is.na(int))
 
   # number of missing phenotypes
   nmissing <- floor(nrow(temp) * rate)
@@ -35,18 +35,19 @@ merge_data <- function(pdata, field = field_id, int = TRUE) {
 }
 
 
-args <- (commandArgs(TRUE))
-print(args)
-for (k in 1:length(args)) {
-  eval(parse(text = args[[k]]))
-}
+# args <- (commandArgs(TRUE))
+# print(args)
+# for (k in 1:length(args)) {
+#   eval(parse(text = args[[k]]))
+# }
+missing_rate = 0.75
 
-field_id <- 3063
+field_id <- 50
 
 pdata <- create_missing_phenotypes(field = field_id, 
                                    in_id_file = "in.id.rds", rate = missing_rate)
 pheno <- merge_data(pdata = pdata)
-G <- BEDMatrix::BEDMatrix(path = "final.bed", simple_names = T) # read genetic data
+G <- BEDMatrix::BEDMatrix(path = "allchromosome.bed", simple_names = T) # read genetic data
 
 cl <- makeCluster(type = "MPI")
 registerDoParallel(cl)
@@ -54,10 +55,11 @@ registerDoParallel(cl)
 clusterExport(cl, list("pheno"))
 clusterEvalQ(cl, {
   library(dplyr)
-  G <- BEDMatrix::BEDMatrix(path = "final.bed", simple_names = T) # read genetic data
+  G <- BEDMatrix::BEDMatrix(path = "allchromosome.bed", simple_names = T) # read genetic data
 })
 
 results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
+	tryCatch({
   g <- as.numeric(G[as.character(pheno$f.eid), i]) # snp i
   # observed phenotype ~ intercept + age + sex + 10 genetic PC + SNP_i
   assoc.observed <- lm(int ~ ., data = data.frame(
@@ -87,7 +89,10 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
 	
    vas <- c("marginal","oracle","bi")
     vis <- c("beta", "se", "p")
-  names(out) <- as.vector(t(outer(vas, vis, paste, sep = ".")))
+  names(out) <- as.vector(t(outer(vas, vis, paste, sep = ".")))},
+  error=function(e) {
+    NULL
+  })
   return(out)
 })
 

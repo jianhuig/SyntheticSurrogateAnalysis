@@ -1,4 +1,4 @@
-#!/bin/bash
+/home/jianhuig/projects/def-leisun/jianhuig/#!/bin/bash
 module load plink
 cd /home/jianhuig/projects/def-leisun/jianhuig/
 ###############################################################
@@ -45,11 +45,10 @@ for i in {1..22}
 do
 	plink --bfile ukb_snp_chr${i}_v2 \
 	--mind 0.1 \ # Exclude inviduals with > 10% missing genotypes. 
-	--maf 0.05 \ # Include SNPs with maf >=0.05
+	--maf 0.01 \ # Include SNPs with maf >=0.01
 	--geno 0.1 \  # 90% genotype rate
-	--hwe 0.001 \ # Exclude markers fail hwe 0.001
-	--me 0.05 0.1 \ 
-	--indep-pairwise 50 5 0.5 \ # LD pruning. Window size = 50 SNPs, pairwise LD > 0.5 is removed.
+	--hwe 0.00001 \ # Exclude markers fail hwe 0.00001
+	--indep-pairwise 50 5 0.9 \ # LD pruning. Window size = 50 SNPs, pairwise LD > 0.9 is removed.
 	--make-bed \ 
 	--out chr${i}.cleaned 
 done
@@ -70,7 +69,7 @@ sbatch kingship.sh
 # Combined paralled matrix into one
 find . -type f -name 'split.king.bin.*' -exec cat {} + >> split.king.bin
 # use 0.177 to remove frist degress
-plink2 --bfile allchromosome --king-cutoff split 0.177 --out final
+plink2 --bfile allchromosome --king-cutoff split 0.0625 --out final
 
 ###############################################################
 ################## Phenotype and Covariates ###################

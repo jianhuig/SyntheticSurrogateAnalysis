@@ -42,14 +42,14 @@ In total, 25697 individuals were removed in the association analysis due to bein
 ```{r}
 id <- 50
 
-result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", 0, ".rds"))
+result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", 0, ".rds"))
 
 true_snp_index <- which(result$oracle.p < 5e-8)
 
 avg_chisq <- c()
 
-for (i in c(0, 0.25, 0.5, 0.75)) {
-  result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
   result <- result[true_snp_index, ]
   chisq.orcale <- (result$oracle.beta / result$oracle.se)^2
   chisq.marginal <- (result$marginal.beta / result$marginal.se)^2
@@ -59,7 +59,7 @@ for (i in c(0, 0.25, 0.5, 0.75)) {
 colnames(avg_chisq) <- c("oracle", "marginal", "bivariate")
 avg_chisq <- avg_chisq %>%
   data.frame() %>%
-  mutate(missing = c(0, 0.25, 0.5, 0.75))
+  mutate(missing = c(0, 0.25, 0.5, 0.75, 0.9))
 
 tidyr::gather(avg_chisq, method, chisq, colnames(avg_chisq)[1:3]) %>% ggplot(aes(x = missing, y = chisq, group = method, color = method)) +
   geom_point() +
@@ -67,7 +67,7 @@ tidyr::gather(avg_chisq, method, chisq, colnames(avg_chisq)[1:3]) %>% ggplot(aes
   ylab(expression(Mean ~ chi^2)) +
   xlab("Percent of phenotype missingness")
 
-avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75), y = bivariate / marginal)) +
+avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75, 0.9), y = bivariate / marginal)) +
   geom_point() +
   geom_line() +
   xlab("Rercent of phenotype missingness") +
@@ -77,8 +77,8 @@ avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75), y = bivariate / marginal)) +
 # Estimated Effect Size
 ```{r}
 betas <- c()
-for (i in c(0, 0.25, 0.5, 0.75)) {
-  result <- readRDS(paste0("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
   result <- result[true_snp_index, ]
   betas <- rbind(betas, cbind(i, result$oracle.beta, result$marginal.beta, result$bi.beta))
 }
@@ -88,7 +88,8 @@ missing_names <- c(
   `0` = "Missing Rate = 0%",
   `0.25` = "Missing Rate = 25%",
   `0.5` = "Missing Rate = 50%",
-  `0.75` = "Missing Rate = 75%"
+  `0.75` = "Missing Rate = 75%",
+  `0.9` = "Missing Rate = 90%"
 )
 plot <- betas %>%
   data.frame() %>%

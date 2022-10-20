@@ -205,6 +205,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
 ```
 
 # Android total mass (23248)
+
 ```{r}
 pheno_id <- "f.23248.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -253,8 +254,13 @@ gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% fi
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
+```{r}
+qqman::qq(result$marginal.p)
+```
+
 
 # Arms total mass (23260)
+
 ```{r}
 pheno_id <- "f.23260.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -304,7 +310,12 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8,
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
 
+```{r}
+qqman::qq(result$marginal.p)
+```
+
 # Gynoid total mass (23265)
+
 ```{r}
 pheno_id <- "f.23265.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -354,9 +365,12 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8,
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
 
-
+```{r}
+qqman::qq(result$marginal.p)
+```
 
 # Total mass (23283)
+
 ```{r}
 pheno_id <- "f.23283.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -406,8 +420,12 @@ gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% fi
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
+```{r}
+qqman::qq(result$marginal.p)
+```
 
-# Legs total mass
+# Legs total mass(23277)
+
 ```{r}
 pheno_id <- "f.23277.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -455,8 +473,12 @@ gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% fi
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
+```{r}
+qqman::qq(result$marginal.p)
+```
 
 # Trunk total mass (23287)
+
 ```{r}
 pheno_id <- "f.23287.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
@@ -503,4 +525,8 @@ gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = margi
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
 toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
+```
+
+```{r}
+qqman::qq(result$marginal.p)
 ```
