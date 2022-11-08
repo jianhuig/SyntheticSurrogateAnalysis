@@ -1,4 +1,4 @@
-CHR,N_remaining,>90% genotype rate removed ,N_remaining,hwe<1e-5 removed,N_remaining,maf >0.05 removed,N_remaining,LD pruning 0.9,N_remaining
+CHR,N_remaining,>90% genotype rate removed ,N_remaining,hwe<1e-5 removed,N_remaining,maf <0.01 removed,N_remaining,LD pruning 0.9,N_remaining
 chr1,63487,4089,59398,16010,43388,24147,19241,1234,18007
 chr2,61966,4598,57368,16067,41301,22531,18770,1029,17741
 chr3,52300,3640,48660,13016,35644,19329,16315,837,15478
