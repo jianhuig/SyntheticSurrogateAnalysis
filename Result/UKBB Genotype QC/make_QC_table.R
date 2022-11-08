@@ -15,7 +15,7 @@ colnames(qc_data) <- c(" ",
                        "Variants left",
                        "Variants with HWE < 1e-5",
                        "Variants left",
-                       "Variants with MAF < 5%", # Needs to be updated.
+                       "Variants with MAF < 1%", # Needs to be updated.
                        "Variants left",
                        "Variants with LD Pruning > 0.9",
                        "Variants left"
