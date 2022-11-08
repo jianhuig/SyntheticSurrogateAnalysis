@@ -9,7 +9,7 @@ qc_data <- read.csv('Data QC - Sheet1.csv', header = T)
 head(qc_data)
 
 # Clean data.
-colnames(qc_data) <- c("Chromosome",
+colnames(qc_data) <- c(" ",
                        "Initial Dataset",
                        "Variants with < 90% genotype rate",
                        "Variants left",
@@ -25,8 +25,8 @@ colnames(qc_data) <- c("Chromosome",
 print(xtable(qc_data,
              align=c(
                "|p{2.5cm}|",
-               "|p{2.15cm}|",
-               rep("p{1.3cm}|", 9))
+               "|p{1cm}|",
+               rep("p{1.4cm}|", 9))
              ),
       include.rownames=FALSE)
 
