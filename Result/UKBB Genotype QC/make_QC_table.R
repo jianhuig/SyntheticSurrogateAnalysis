@@ -1,0 +1,35 @@
+# Set working directory.
+setwd('~/Documents/GitHub/SyntheticSurrogateAnalysis/Result/UKBB Genotype QC')
+
+# Load necessary packages.
+library(xtable)
+
+# Read in data.
+qc_data <- read.csv('Data QC - Sheet1.csv', header = T)
+head(qc_data)
+
+# Clean data.
+colnames(qc_data) <- c("Chromosome",
+                       "Initial Dataset",
+                       "Variants with < 90% genotype rate",
+                       "Variants Remaining",
+                       "Variants with HWE < 1e-5",
+                       "Variants Remaining",
+                       "Variants with MAF < 5%", # Needs to be updated.
+                       "Variants Remaining",
+                       "Variants with LD Pruning > 0.9",
+                       "Variants Remaining"
+                       )
+
+# Make table for the manuscript.
+print(xtable(qc_data,
+             align=c(
+               "|p{2.5cm}|",
+               "|p{2.1cm}|",
+               rep("p{1.3cm}|", 9))
+             ),
+      include.rownames=FALSE)
+
+
+
+
