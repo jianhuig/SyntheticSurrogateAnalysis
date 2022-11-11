@@ -61,7 +61,7 @@ result %>%
   tidyr::gather() %>%
   ggplot(aes(x = key, y = value, color = key)) +
   geom_boxplot() +
-  geom_hline(yintercept = beta_g, color = "red")
+  geom_hline(yintercept = beta.g, color = "red")
 
 #-----Multiple Imputation, Incorrectly specified ------
 cl <- makeCluster(detectCores())
@@ -94,7 +94,7 @@ result <- foreach(
   beta.imputed.50 <- summary(assoc.imputed.50)$coefficients["g", 1]
   assoc.imputed.75 <- lm(y.imputed.75 ~ X + g)
   beta.imputed.75 <- summary(assoc.imputed.75)$coefficients["g", 1]
-  
+
   out <- c(beta.oracle, beta.imputed.25, beta.imputed.50, beta.imputed.75)
   names(out) <- c("oracle", "25% missing", "50% missing", "75% missing")
   out
@@ -106,7 +106,7 @@ result %>%
   tidyr::gather() %>%
   ggplot(aes(x = key, y = value, color = key)) +
   geom_boxplot() +
-  geom_hline(yintercept = beta_g, color = "red")
+  geom_hline(yintercept = beta.g, color = "red")
 
 #-------------- Changing the target outcome ------
 cl <- makeCluster(detectCores())
@@ -144,7 +144,7 @@ result <- foreach(
   y.imputed.75 <- predict(assoc.imputed.75, cbind(X, g) %>% data.frame())
   assoc.imputed.75 <- lm(y.imputed.75 ~ X + g)
   beta.imputed.75 <- summary(assoc.imputed.75)$coefficients["g", 1]
-  
+
   out <- c(beta.oracle, beta.imputed.25, beta.imputed.50, beta.imputed.75)
   names(out) <- c("oracle", "25% missing", "50% missing", "75% missing")
   out
@@ -156,4 +156,4 @@ result %>%
   tidyr::gather() %>%
   ggplot(aes(x = key, y = value, color = key)) +
   geom_boxplot() +
-  geom_hline(yintercept = beta_g, color = "red")
+  geom_hline(yintercept = beta.g, color = "red")

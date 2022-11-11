@@ -7,7 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, cache=TRUE)
-source("~/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Code/imputation_simulation.R")
+source("~/Documents/GitHub/SyntheticSurrogateAnalysis/Code/imputation_simulation.R")
 ```
 
 # Simulation Parameter
