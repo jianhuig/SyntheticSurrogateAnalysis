@@ -209,6 +209,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
 pheno_id <- "f.23248.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
 in_id <- readRDS("in.id.rds")
 out_id <- readRDS("out.id.rds")
@@ -222,10 +223,22 @@ model.rf <- ranger::ranger(
   data = train,
   as.formula(paste0(pheno_id, "~."))
 )
+get_density <- function(x, y, ...) {
+  dens <- MASS::kde2d(x, y, ...)
+  ix <- findInterval(x, dens$x)
+  iy <- findInterval(y, dens$y)
+  ii <- cbind(ix, iy)
+  return(dens$z[ii])
+}
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 18, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,20))+ylim(c(0,20))
 
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 15, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 18, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,20))+ylim(c(0,20))
+
+ggpubr::ggarrange(p1, p2)
 ```
 
 ```{r}
@@ -259,6 +272,7 @@ toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", ch
 pheno_id <- "f.23260.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
 in_id <- readRDS("in.id.rds")
 out_id <- readRDS("out.id.rds")
@@ -273,9 +287,15 @@ model.rf <- ranger::ranger(
   as.formula(paste0(pheno_id, "~."))
 )
 
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 20, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,22))+ylim(c(0,22))
+
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 15, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 20, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,22))+ylim(c(0,22))
+
+ggpubr::ggarrange(p1, p2)
 ```
 
 ```{r}
@@ -309,6 +329,7 @@ toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", ch
 pheno_id <- "f.23265.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
 in_id <- readRDS("in.id.rds")
 out_id <- readRDS("out.id.rds")
@@ -323,9 +344,15 @@ model.rf <- ranger::ranger(
   as.formula(paste0(pheno_id, "~."))
 )
 
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 25, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,30))+ylim(c(0,30))
+
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 21, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 25, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,30))+ylim(c(0,30))
+
+ggpubr::ggarrange(p1, p2)
 ```
 
 ```{r}
@@ -358,6 +385,7 @@ toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", ch
 
 # Total mass (23283)
 ```{r}
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 pheno_id <- "f.23283.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
@@ -375,9 +403,15 @@ model.rf <- ranger::ranger(
   as.formula(paste0(pheno_id, "~."))
 )
 
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 150, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,160))+ylim(c(0,160))
+
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 21, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 150, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,160))+ylim(c(0,160))
+
+ggpubr::ggarrange(p1, p2)
 ```
 
 ```{r}
@@ -398,9 +432,11 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
+bim <- fread("../../Data/final.bim")[,c(1,2,4)]
 colnames(bim) = c("CHR", "SNP", "POS")
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
+result <- result %>% rename(SNP = rsid) %>% inner_join(bim)
+qqman::manhattan(result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001))
+
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p) %>% filter(pvalue<0.001)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
@@ -412,6 +448,7 @@ toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", ch
 pheno_id <- "f.23277.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
 in_id <- readRDS("in.id.rds")
 out_id <- readRDS("out.id.rds")
@@ -426,9 +463,15 @@ model.rf <- ranger::ranger(
   as.formula(paste0(pheno_id, "~."))
 )
 
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 55, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,60))+ylim(c(0,60))
+
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 21, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 55, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,60))+ylim(c(0,60))
+
+ggpubr::ggarrange(p1, p2)
 ```
 ```{r}
 result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/pheno=", pheno_id, "_result.rds"))
@@ -461,6 +504,7 @@ toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", ch
 pheno_id <- "f.23287.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
 in_id <- readRDS("in.id.rds")
 out_id <- readRDS("out.id.rds")
@@ -475,9 +519,15 @@ model.rf <- ranger::ranger(
   as.formula(paste0(pheno_id, "~."))
 )
 
+yhat <- predict(model.rf, data = train %>% select(-pheno_id))$predictions
+train$yhat <- yhat
+p1 <- train %>% rename(pheno = pheno_id) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 95, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("Model-building dataset")+xlim(c(0,100))+ylim(c(0,100))
+
 yhat <- predict(model.rf, data = test %>% select(-f.eid,-pheno_id))$predictions
 test$yhat <- yhat
-test %>% rename(pheno = pheno_id) %>% ggplot(aes(x = pheno/1000, y = yhat/1000)) + geom_point() + xlab("Observed Total Mass in kg") + ylab("Predicted Total Fat Mass in kg") + ggtitle("Random Forest Prediction")+geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 21, aes(label = ..rr.label..))
+p2 <- test %>% rename(pheno = pheno_id) %>% filter(!is.na(pheno)) %>% mutate(density = get_density(pheno/1000, yhat/1000)) %>% ggplot(aes(x = pheno/1000, y = yhat/1000, color = density)) + geom_point(alpha = 0.2) + xlab("Observed mass (kg)") + ylab("Predicted mass (kg)") +geom_smooth(method = "lm")+ ggpubr::stat_regline_equation(label.y = 95, aes(label = ..rr.label..))+scale_color_gradient(low = "red", high = "yellow", na.value = NA)+ theme_bw() + ggtitle("GWAS dataset")+xlim(c(0,100))+ylim(c(0,100))
+
+ggpubr::ggarrange(p1, p2)
 ```
 ```{r}
 result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/pheno=", pheno_id, "_result.rds"))
