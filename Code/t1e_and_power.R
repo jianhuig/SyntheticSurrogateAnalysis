@@ -10,12 +10,11 @@ library(dplyr)
 #' @param pve_g Proportion of variance explained by genetic cov G
 #' @return Data.frame.
 Sim <- function(n = 1e3, reps = 1e3, missing_rate = 0,
-                rho = 0, pve_g) {
-  
-  outer_loop <- parallel::mclapply(seq_len(reps), function(i) {
+                rho = 0, pve_g=0) {
+  outer_loop <- pbapply::pblapply(seq_len(reps), function(i) {
     
     # Generate data under the null
-    data <- DGP(n0 = n, miss = missing_rate, rho = rho, pve_g = pve_g)
+    data <- DGP(n0 = n, miss = missing_rate, rho = rho, pve_g = 0)
     
     # Oracle estimator.
     oracle_est <- OracleEst(data)
@@ -33,14 +32,14 @@ Sim <- function(n = 1e3, reps = 1e3, missing_rate = 0,
       miss = missing_rate,
       rho = rho,
       method = c("oracle", "obs", "ss"),
-      pve_g = pve_g,
+      pve_g = 0,
       est = ests[, 1],
       se = ests[, 2],
       row.names = NULL
     )
     
     return(out)
-    })
+    }, cl = cl)
   
   do.call(rbind, outer_loop)
   }
@@ -108,7 +107,7 @@ DGP <- function(
   )
   return(out)
 }
-
+CMplot::CMplot(try, plot.type = 'q')
 
 #' Estimate Genetic Effect
 #' 
@@ -129,8 +128,8 @@ EstBetaG <- function(covar, geno, outcome) {
   fit_summary <- summary(fit)$coefficients
   
   out <- fit_summary[
-    rownames(fit_summary) == "g", c("Estimate", "Std. Error")]
-  names(out) <- c("est", "se")
+    rownames(fit_summary) == "g", c("Estimate", "Pr(>|t|)", "Std. Error")]
+  names(out) <- c("est", "p", "se")
   return(out)
 }
 
@@ -173,7 +172,7 @@ ObsEst <- function(data) {
 SynSurrEst <- function(data) {
   
   # SynSurr estimator.
-  fit <- SurrogateRegression::FitBNR(
+  fit <- SurrogateRegression::Fit.BNR(
     t = data$yobs,
     s = data$s, 
     X = data[, c("g", "x")],
@@ -182,6 +181,7 @@ SynSurrEst <- function(data) {
   
   out <- c(
     ss_est = param$Point[1],
+    ss_p = param$p[1],
     ss_se = param$SE[1]
   )
   return(out)
@@ -194,13 +194,50 @@ SynSurrEst <- function(data) {
 # Outer loop missing_rate over (0, 0.25, 0.5, 0.75)
 # Inner loop rho over (0, 0.25, 0.5, 0.75)
 outer_loop <- pbapply::pblapply(c(0, 0.25, 0.5, 0.75),function(RHO){
-  inner_loop <- lapply(c(0, 0.25, 0.5, 0.75),function(MISS){
+  inner_loop <- lapply(c(0, 0.25, 0.5, 0.75, 0.9),function(MISS){
     Sim(n = 1e3, reps = 1e5, missing_rate = MISS, rho = RHO, pve_g = 0)
   })
   do.call(rbind, inner_loop)}
 )
 
 t1e_result <- do.call(rbind, outer_loop)
+
+t1e_result <- readRDS("../Data/t1e_result.rds") %>% filter(method == "ss")
+library(ggplot2)
+color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
+biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
+missing_names <- c(`0` = "Missing Rate = 0%",
+                   `0.25` = "Missing Rate = 25%",
+                   `0.5` = "Missing Rate = 50%",
+                   `0.75` = "Missing Rate = 75%",
+                   `0.9` = "Missing Rate = 90%"
+)
+p1 <- t1e_result %>% 
+  group_by(miss, rho) %>%
+  mutate(expected = -log10(ppoints(n())), observed = -log10(sort(se)),
+         clower   = -log10(qbeta(p = (1 - 0.95) / 2, shape1 = 1:n(), shape2 = n():1)),
+         cupper   = -log10(qbeta(p = (1 + 0.95) / 2, shape1 = 1:n(), shape2 = n():1))) %>%
+  ggplot()+
+  geom_point(aes(expected, observed, color = factor(rho)))+
+  xlab(expression(paste("Expected -log"[10], plain(P))))+
+  ylab(expression(paste("Observed -log"[10], plain(P)))) +
+  guides(color = guide_legend(title = expression(rho))) +
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+ 
+  geom_abline(intercept = 0, slope = 1, color = "red")+
+  geom_line(aes(expected, cupper), linetype = 2) +
+  geom_line(aes(expected, clower), linetype = 2) +
+  theme_bw()+
+  facet_wrap(~miss, labeller = as_labeller(missing_names))
+
+ggsave(
+  plot = p1,
+  filename = "qq_sim.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
 
 # Run the power simulation for different SNP-heritability level
 # Unde the alternative
@@ -213,7 +250,7 @@ parallel <- FALSE
 if (!parallel) {
   outer_loop <- pbapply::pblapply(snp_heritability, function(H) {
     inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
-      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
+      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75, 0.9), function(MISS) {
         Sim(n = 1e3, reps = 1e4, missing_rate = MISS, rho = RHO, pve_g = H)
       })
       do.call(rbind, inner_inner_loop)
@@ -226,7 +263,7 @@ if (!parallel) {
   parallel::clusterEvalQ(cl, library(dplyr))
   outer_loop <- pbapply::pblapply(snp_heritability, function(H) {
     inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(RHO) {
-      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75), function(MISS) {
+      inner_inner_loop <- lapply(c(0, 0.25, 0.5, 0.75, 0.9), function(MISS) {
         Sim(n = 1e3, reps = 1e4, missing_rate = MISS, rho = RHO, pve_g = H)
       })
       do.call(rbind, inner_inner_loop)
@@ -297,7 +334,8 @@ ggsave(
 missing_names <- c(`0` = "Missing Rate = 0%",
                    `0.25` = "Missing Rate = 25%",
                    `0.5` = "Missing Rate = 50%",
-                   `0.75` = "Missing Rate = 75%"
+                   `0.75` = "Missing Rate = 75%",
+                   `0.9` = "Missing Rate = 90%"
 )
 
 re_plot <- power_result %>%
@@ -318,6 +356,7 @@ re_plot <- power_result %>%
   xlab("Missing Rate (%)") +
   ylab("Relative Efficiency") +
   guides(color = guide_legend(title = expression(rho))) +
+  scale_x_continuous(breaks = c(0,25,50,75,90))+
   scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+theme_bw()
 
 ggsave(
@@ -345,6 +384,7 @@ re_h2_plot <- power_result %>%
   facet_wrap(. ~ miss, labeller = as_labeller(missing_names)) +
   scale_color_manual(name = expression(rho), values = biv_palette) +
   xlab("SNP Heritability (%)") +
+  scale_x_continuous(breaks = c(0.1,0.3,0.5,0.7,0.9,1.1))
   ylab("Relative Efficiency")+theme_bw()
 
 ggsave(
