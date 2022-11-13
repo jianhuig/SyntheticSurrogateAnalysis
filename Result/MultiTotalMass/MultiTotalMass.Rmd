@@ -17,7 +17,7 @@ library(hudson)
 ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10=TRUE, 
                     yaxis, opacity=1, annotate_snp, annotate_p, toptitle=NULL, 
                     bottomtitle=NULL, highlight_snp, highlight_p, highlighter="red", 
-                    chrcolor1="#AAAAAA", chrcolor2="#4D4D4D", freey=FALSE, 
+                    chrcolor1="#AAAAAA", chrcolor2="#4D4D4D", chrcolor3, chrcolor4, freey=TRUE, 
                     background="variegated", chrblocks=FALSE, file="gmirror", 
                     type="png", hgt=7, hgtratio=0.5, wi=12, res=300 ){
   
@@ -56,6 +56,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
   #Color by CHR
   colnames(d_order)[2] <- "Color"
   newcols <-c(rep(x=c(chrcolor1, chrcolor2), length.out=nchrcolors, each=1), "#FFFFFF", "#EBEBEB")
+  newcols2 <-c(rep(x=c(chrcolor3, chrcolor4), length.out=nchrcolors, each=1), "#FFFFFF", "#EBEBEB")
   names(newcols) <-c(levels(factor(lims$Color)), "shade_ffffff", "shade_ebebeb")
 
   #Info for y-axis
@@ -109,7 +110,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
   if(chrblocks==TRUE){
     p2 <- p2 + geom_rect(data = lims, aes(xmin = posmin-.5, xmax = posmax+.5, ymin = -Inf, ymax = min(d_order$pval), fill=as.factor(Color)), alpha = 1)
   }  
-  p2 <- p2 + scale_colour_manual(name = "Color", values = newcols) + scale_fill_manual(name = "Color", values = newcols)
+  p2 <- p2 + scale_colour_manual(name = "Color", values = newcols2) + scale_fill_manual(name = "Color", values = newcols)
   p2 <- p2 + theme(axis.text.x=element_text(angle=90), panel.grid.minor.x = element_blank(), panel.grid.major.x=element_blank(), axis.title.x=element_blank(), legend.position="bottom", legend.title=element_blank())
 
   #Highlight if given
@@ -439,8 +440,7 @@ qqman::manhattan(result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p
 
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p) %>% filter(pvalue<0.001)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001)
-ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
-toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
+ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", background = "white")
 ```
 
 # Legs total mass

@@ -375,9 +375,9 @@ qqman::qq(result$marginal.p)
 pheno_id <- "f.23283.2.0"
 cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
 # split data into train and test
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
+file <- read.table("../../Data/CombinedTotalMass.tab", header=TRUE, sep="\t")
+in_id <- readRDS("../../Data/in.id.rds")
+out_id <- readRDS("../../Data/out.id.rds")
 
 cov_column <- file %>% select(cov_id)
 train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
@@ -412,13 +412,13 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
+bim <- fread("~/Desktop/SyntheticSurrogateAnalysis/Data/final.bim")[,c(1,2,4)]
 colnames(bim) = c("CHR", "SNP", "POS")
 result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p) %>% filter(pvalue<0.001)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, 
-toptitle="SynSurr GWAS", bottomtitle = "Marginal GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
+toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "99FF99", chrcolor2 = "669900")
 ```
 ```{r}
 qqman::qq(result$marginal.p)
