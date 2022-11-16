@@ -18,15 +18,19 @@ colnames(qc_data) <- c(" ",
                        "Variants with MAF < 1%", # Needs to be updated.
                        "Variants left",
                        "Variants with LD Pruning > 0.9",
-                       "Variants left"
+                       "Analysis Dataset"
                        )
+dim(qc_data)
+
+qc_data <- qc_data[, -which(colnames(qc_data) == "Variants left")]
+dim(qc_data)
 
 # Make table for the manuscript.
 print(xtable(qc_data,
              align=c(
                "|p{2.5cm}|",
                "|p{1cm}|",
-               rep("p{1.4cm}|", 9))
+               rep("p{2.2cm}|", 6))
              ),
       include.rownames=FALSE)
 
