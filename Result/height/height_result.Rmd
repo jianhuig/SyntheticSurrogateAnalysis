@@ -78,7 +78,7 @@ avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75, 0.9), y = bivariate / margina
 ```{r}
 betas <- c()
 for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
-  result <- readRDS(paste0("~/Desktop/EHR_research/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
   result <- result[true_snp_index, ]
   betas <- rbind(betas, cbind(i, result$oracle.beta, result$marginal.beta, result$bi.beta))
 }
@@ -103,7 +103,7 @@ plot <- betas %>%
   geom_smooth(method = "lm") +
   ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
   xlab(expression(beta[oracle])) +
-  ylab(expression(beta[marginal])) +
+  ylab(expression(beta[standard])) +
   theme_bw()
 ggsave(
   plot = plot,
