@@ -16,8 +16,6 @@ colnames(qc_data) <- c(" ",
                        "Variants with HWE < 1e-5",
                        "Variants left",
                        "Variants with MAF < 1%", # Needs to be updated.
-                       "Variants left",
-                       "Variants with LD Pruning > 0.9",
                        "Analysis Dataset"
                        )
 dim(qc_data)
@@ -30,7 +28,7 @@ print(xtable(qc_data,
              align=c(
                "|p{2.5cm}|",
                "|p{1cm}|",
-               rep("p{2.2cm}|", 6))
+               rep("p{2.2cm}|", 5))
              ),
       include.rownames=FALSE)
 
