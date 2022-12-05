@@ -96,7 +96,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
     p1 <- p1 + geom_rect(data = lims, aes(xmin = posmin-.5, xmax = posmax+.5, ymin = -Inf, ymax = min(d_order$pval), fill=as.factor(Color)), alpha = 1)
   }
   p1 <- p1 + scale_colour_manual(name = "Color", values = newcols) + scale_fill_manual(name = "Color", values = newcols)
-  p1 <- p1 + theme(panel.grid.minor.x = element_blank(), panel.grid.major.x=element_blank(), axis.title.x=element_blank(), legend.position="top", legend.title=element_blank())
+  p1 <- p1 + theme(panel.grid.minor.x = element_blank(), panel.grid.major.x=element_blank(), axis.title.x=element_blank(), legend.position="top", legend.title=element_blank()) + theme_bw()
 
   #BOTTOM PLOT
   p2 <- ggplot() + eval(parse(text=backpanel2))
@@ -111,7 +111,7 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
     p2 <- p2 + geom_rect(data = lims, aes(xmin = posmin-.5, xmax = posmax+.5, ymin = -Inf, ymax = min(d_order$pval), fill=as.factor(Color)), alpha = 1)
   }  
   p2 <- p2 + scale_colour_manual(name = "Color", values = newcols2) + scale_fill_manual(name = "Color", values = newcols)
-  p2 <- p2 + theme(axis.text.x=element_text(angle=90), panel.grid.minor.x = element_blank(), panel.grid.major.x=element_blank(), axis.title.x=element_blank(), legend.position="bottom", legend.title=element_blank())
+  p2 <- p2 + theme(axis.text.x=element_text(angle=90), panel.grid.minor.x = element_blank(), panel.grid.major.x=element_blank(), axis.title.x=element_blank(), legend.position="bottom", legend.title=element_blank()) +theme_bw()
 
   #Highlight if given
   if(!missing(highlight_snp)){
@@ -272,7 +272,7 @@ result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = B
 
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
-ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF")
+ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "android_miami")
 ```
 
 # Arms total mass (23260)
@@ -315,15 +315,13 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/final.bim", header = TRUE)
-result <- result %>% inner_join(bim, by = "rsid")
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
 
-write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
-                                                                  marginal.se, marginal.p, bi.beta,
-                                                                  bi.se, bi.p), file = "small_p.csv",
-          row.names = FALSE, quote = FALSE)
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
 
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "arms_miami")
@@ -369,14 +367,13 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-result <- result %>% inner_join(bim, by = "rsid")
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
 
-write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
-                                                                  marginal.se, marginal.p, bi.beta,
-                                                                  bi.se, bi.p), file = "small_p.csv",
-          row.names = FALSE, quote = FALSE)
-colnames(bim) = c("CHR", "SNP", "POS")
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
+
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "gynoid_miami")
@@ -425,14 +422,12 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 
 ```{r}
-#library(hudson)
-result <- result %>% inner_join(bim, by = "rsid")
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
 
-write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
-                                                                  marginal.se, marginal.p, bi.beta,
-                                                                  bi.se, bi.p), file = "small_p.csv",
-          row.names = FALSE, quote = FALSE)
-qqman::manhattan(result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001))
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
 
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
@@ -477,17 +472,16 @@ cat("Average Chisq of SynSurr:", mean((result$bi.beta[index]/result$bi.se[index]
 cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(result$bi.se[index])^2))
 ```
 ```{r}
-#library(hudson)
-result <- result %>% inner_join(bim, by = "rsid")
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
 
-write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
-                                                                  marginal.se, marginal.p, bi.beta,
-                                                                  bi.se, bi.p), file = "small_p.csv",
-          row.names = FALSE, quote = FALSE)
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
+
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
-ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "arms_miami")
+ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "legs_miami")
 ```
 
 # Trunk total mass (23287)
@@ -529,13 +523,13 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-result <- result %>% inner_join(bim, by = "rsid")
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
 
-write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
-                                                                  marginal.se, marginal.p, bi.beta,
-                                                                  bi.se, bi.p), file = "small_p.csv",
-          row.names = FALSE, quote = FALSE)
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
+
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
 ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", file = "trunk_miami")
