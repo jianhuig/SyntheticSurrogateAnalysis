@@ -384,8 +384,9 @@ re_h2_plot <- power_result %>%
   facet_wrap(. ~ miss, labeller = as_labeller(missing_names)) +
   scale_color_manual(name = expression(rho), values = biv_palette) +
   xlab("SNP Heritability (%)") +
-  scale_x_continuous(breaks = c(0.1,0.3,0.5,0.7,0.9,1.1))
-  ylab("Relative Efficiency")+theme_bw()
+  scale_x_continuous(breaks = c(0.1,0.3,0.5,0.7,0.9,1.1))+
+  ylab("Relative Efficiency")+
+  theme_bw()
 
 ggsave(
   plot = re_h2_plot,

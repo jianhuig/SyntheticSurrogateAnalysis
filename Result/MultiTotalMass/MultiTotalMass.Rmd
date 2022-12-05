@@ -202,20 +202,25 @@ ggmirror <- function(top, bottom, tline, bline, chroms = c(1:22, "X", "Y"),log10
   p <- grid.arrange(arrangeGrob(p1, top=toptitle), arrangeGrob(p2, bottom=bottomtitle), padding=0, heights=c(hgtratio,1-hgtratio))
   ggsave(p, filename=paste0(file, ".", type), dpi=res, units="in", height=hgt, width=wi)
 }
+
+white <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/Ancestry.tab", header = TRUE)
+file <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/CombinedTotalMass.tab", header=TRUE, sep="\t")
+in_id <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/final.king.cutoff.in.id", header=TRUE) %>% pull(FID)
+out_id <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/final.king.cutoff.out.id", header=TRUE)%>% pull(FID)
+
+cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
+# split data into train and test
+
+cov_column <- file %>% select(cov_id)
+bim <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/final.bim", header = TRUE)
 ```
 
 # Android total mass (23248)
 ```{r}
 pheno_id <- "f.23248.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
 
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23248.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23248.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -242,7 +247,8 @@ ggpubr::ggarrange(p1, p2)
 
 ```{r}
 result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/pheno=", pheno_id, "_result.rds"))
-result[,2:7] <- result %>% select(-rsid) %>% mutate_if(is.character, as.numeric)
+result[,2:7] <-  mutate_all(result[,2:7], function(x) as.numeric(x))
+
 
 index1 <- which(result$marginal.p<5e-8)
 cat ("Total Number of Discovery by marginal GWAS:", length(index1), "\n")
@@ -257,27 +263,23 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
-colnames(bim) = c("CHR", "SNP", "POS")
-result <- result %>% rename(SNP = rsid) %>% left_join(bim)
+result <- result %>% inner_join(bim, by = "rsid") %>% rename(SNP = rsid, POS = BP)
+
+#write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+#                                                                  marginal.se, marginal.p, bi.beta,
+#                                                                  bi.se, bi.p), file = "small_p.csv",
+#          row.names = FALSE, quote = FALSE)
+
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
-ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF", background = "white")
+ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GWAS", bottomtitle = "Standard GWAS", chrcolor1 = "#00FF00", chrcolor2 = "#006600", chrcolor4 = "#0000CC", chrcolor3 = "#0099FF")
 ```
 
 # Arms total mass (23260)
 ```{r}
 pheno_id <- "f.23260.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
-
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23260.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23260.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -298,7 +300,7 @@ ggpubr::ggarrange(p1, p2)
 
 ```{r}
 result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/pheno=", pheno_id, "_result.rds"))
-result[,2:7] <- result %>% select(-rsid) %>% mutate_if(is.character, as.numeric)
+result[,2:7] <-  mutate_all(result[,2:7], function(x) as.numeric(x))
 
 index1 <- which(result$marginal.p<5e-8)
 cat ("Total Number of Discovery by marginal GWAS:", length(index1), "\n")
@@ -313,8 +315,14 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
-colnames(bim) = c("CHR", "SNP", "POS")
+bim <- read.table("~/Desktop/SyntheticSurrogateAnalysis/Data/final.bim", header = TRUE)
+result <- result %>% inner_join(bim, by = "rsid")
+
+write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+                                                                  marginal.se, marginal.p, bi.beta,
+                                                                  bi.se, bi.p), file = "small_p.csv",
+          row.names = FALSE, quote = FALSE)
+
 result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
@@ -324,16 +332,8 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GW
 # Gynoid total mass (23265)
 ```{r}
 pheno_id <- "f.23265.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
-
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23265.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23265.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -354,7 +354,7 @@ ggpubr::ggarrange(p1, p2)
 
 ```{r}
 result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/pheno=", pheno_id, "_result.rds"))
-result[,2:7] <- result %>% select(-rsid) %>% mutate_if(is.character, as.numeric)
+result[,2:7] <- result[,2:7] %>% mutate_if(is.character, as.numeric)
 
 index1 <- which(result$marginal.p<5e-8)
 cat ("Total Number of Discovery by marginal GWAS:", length(index1), "\n")
@@ -369,7 +369,12 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
+result <- result %>% inner_join(bim, by = "rsid")
+
+write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+                                                                  marginal.se, marginal.p, bi.beta,
+                                                                  bi.se, bi.p), file = "small_p.csv",
+          row.names = FALSE, quote = FALSE)
 colnames(bim) = c("CHR", "SNP", "POS")
 result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
@@ -383,15 +388,8 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GW
 ```{r}
 setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
 pheno_id <- "f.23283.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
-
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23283.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23283.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -428,9 +426,12 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 
 ```{r}
 #library(hudson)
-bim <- fread("../../Data/final.bim")[,c(1,2,4)]
-colnames(bim) = c("CHR", "SNP", "POS")
-result <- result %>% rename(SNP = rsid) %>% inner_join(bim)
+result <- result %>% inner_join(bim, by = "rsid")
+
+write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+                                                                  marginal.se, marginal.p, bi.beta,
+                                                                  bi.se, bi.p), file = "small_p.csv",
+          row.names = FALSE, quote = FALSE)
 qqman::manhattan(result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)%>% filter(pvalue<0.001))
 
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
@@ -441,16 +442,8 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GW
 # Legs total mass
 ```{r}
 pheno_id <- "f.23277.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
-
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23277.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23277.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -485,8 +478,12 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
-colnames(bim) = c("CHR", "SNP", "POS")
+result <- result %>% inner_join(bim, by = "rsid")
+
+write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+                                                                  marginal.se, marginal.p, bi.beta,
+                                                                  bi.se, bi.p), file = "small_p.csv",
+          row.names = FALSE, quote = FALSE)
 result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)
@@ -496,16 +493,8 @@ ggmirror(top=gwas.t, bottom=gwas.b, tline=5e-8, bline=5e-8, toptitle="SynSurr GW
 # Trunk total mass (23287)
 ```{r}
 pheno_id <- "f.23287.2.0"
-cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0") #age,sex,height, weight, BMI
-# split data into train and test
-setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/")
-file <- read.table("CombinedTotalMass.tab", header=TRUE, sep="\t")
-in_id <- readRDS("in.id.rds")
-out_id <- readRDS("out.id.rds")
-
-cov_column <- file %>% select(cov_id)
-train <- file %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id)
-test <- file %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)
+train <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(pheno_id, cov_id) %>% filter(f.23287.2.0 > 100)
+test <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0)) %>% filter(f.eid %in% in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid,pheno_id, cov_id)  %>% tidyr::drop_na(pheno_id) %>% filter(f.23287.2.0 > 100)
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -540,8 +529,12 @@ cat("RE (Mean Square Standard Error)", mean((result$marginal.se[index])^2/(resul
 ```
 ```{r}
 #library(hudson)
-bim <- fread("final.bim")[,c(1,2,4)]
-colnames(bim) = c("CHR", "SNP", "POS")
+result <- result %>% inner_join(bim, by = "rsid")
+
+write.csv(result %>% filter(marginal.p<1e-5|bi.p<1e-5) %>% select(rsid, CHR, BP, Ref, Alt, marginal.beta,
+                                                                  marginal.se, marginal.p, bi.beta,
+                                                                  bi.se, bi.p), file = "small_p.csv",
+          row.names = FALSE, quote = FALSE)
 result <- result %>% rename(SNP = rsid) %>% left_join(bim)
 gwas.b <- result %>% select(SNP, CHR, POS, marginal.p) %>% rename(pvalue = marginal.p)
 gwas.t <- result %>% select(SNP, CHR, POS, bi.p) %>% rename(pvalue = bi.p)

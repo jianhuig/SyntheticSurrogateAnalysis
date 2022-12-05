@@ -23,6 +23,12 @@ in_id <- fread("final.king.cutoff.in.id") %>% rename(f.eid = `#FID`) %>% select(
 out_id <- fread("final.king.cutoff.out.id") %>% rename(f.eid = `#FID`) %>% select(-IID)
 
 cov_column <- file %>% select(cov_id)
+
+# Filter UKB caucasian 
+white <- data.table::fread("Ancestry.tab")
+file <- file %>% inner_join(white) %>% filter(!is.na(f.22006.0.0))
+
+
 train <- file %>% inner_join(out_id) %>% tidyr::drop_na(pheno_id) %>% tidyr::drop_na(all_of(cov_id)) %>% select(all_of(pheno_id), all_of(cov_id))
 test <- file %>% inner_join(in_id) %>% tidyr::drop_na(all_of(cov_id))%>% select(f.eid, all_of(pheno_id), all_of(cov_id))
 

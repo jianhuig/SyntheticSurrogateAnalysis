@@ -87,7 +87,7 @@ cal_betag <- function(h2, maf = 0.25) {
 }
 
 # Please also save chi2 for power.
-result <- readRDS("~/Desktop/power.rds")
+result <- readRDS("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Data/power1e4.rds")
 
 #("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/power.rds")
 
