@@ -1,9 +1,5 @@
 # Short description of the dataset
 
-Link to folder: https://utoronto-my.sharepoint.com/:f:/g/personal/jianhui_gao_mail_utoronto_ca/EghIzbuI_blGjBlNuHYdwQ0BZt2EMZ69PJ7jEmklC8zl9g?e=IvMhPt
-
-Unfortunately, Onedrive has very strict sharing policy. This link will expire in one month.
-
 ## Text Format Data
 
 * plink2.PHENO1.glm.linear
