@@ -8,7 +8,7 @@ filenames <- list.files(path = "Results/ImputationAnalysis", pattern = ".linear"
 for(filename in filenames){
     # get the name of the file
     name <- gsub("(?:[^.]+\\.)([^.]+).*", "\\1", filename)
-    temp <- read.table(filename, header = T)
+    temp <- data.table::fread(filename)
     assign(paste0(name), temp)
 }
 
