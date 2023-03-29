@@ -7,4 +7,4 @@ module load CCEnv
 module load StdEnv/2020
 module load plink/2.00-10252019-avx2
 
-plink2 --bfile allchromosome --pheno Data/height_imputed.txt --pheno-name int_oracle --covar Data/height_covariate.txt --covar-variance-standardize --glm hide-covar
+plink2 --bfile allchromosome --pheno Data/height_imputed.txt --pheno-name int_oracle --covar Data/height_covariate.txt --glm hide-covar
