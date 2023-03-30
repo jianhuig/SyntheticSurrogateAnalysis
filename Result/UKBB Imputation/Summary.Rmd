@@ -11,12 +11,12 @@ library(dplyr)
 library(ggplot2)
 ```
 
-# FEV1
+# Height
 
 ```{r}
 # read all files with .linear extension
 filenames <- list.files(
-    path = "FEV1/",
+    path = "Height/",
     pattern = ".linear",
     full.names = TRUE
 )
@@ -33,7 +33,7 @@ for (filename in filenames) {
 }
 
 # read SynSurr results
-synsurr_results <- readRDS("FEV1/SynSurr_fev1.rds")
+synsurr_results <- readRDS("Height/SynSurr_height.rds")
 ```
 
 ```{r}
@@ -55,7 +55,7 @@ recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_mean$ID))
 
 # false discovery rate
 fdr <- c()
-fdr <- c(fdr, mean(!(single_mean$ID %in% oracle_snps$ID)))
+fdr <- c(fdr, sum(!(single_mean$ID %in% oracle_snps$ID)))
 
 # Single Impuation Random Forest
 single_rf <- imputed_rf_1 %>%
@@ -66,7 +66,7 @@ single_rf <- imputed_rf_1 %>%
 # recover rate
 recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_rf$ID))
 # false discovery rate
-fdr <- c(fdr, mean(!(single_rf$ID %in% oracle_snps$ID)))
+fdr <- c(fdr, sum(!(single_rf$ID %in% oracle_snps$ID)))
 
 # Single Imputation Linear Regression
 single_lr <- imputed_linear_1 %>%
@@ -77,7 +77,7 @@ single_lr <- imputed_linear_1 %>%
 # recover rate
 recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_lr$ID))
 # false discovery rate
-fdr <- c(fdr, mean(!(single_lr$ID %in% oracle_snps$ID)))
+fdr <- c(fdr, sum(!(single_lr$ID %in% oracle_snps$ID)))
 
 # Single Imputation Permutation
 single_perm <- imputed_rf_permute_1 %>%
@@ -88,7 +88,7 @@ single_perm <- imputed_rf_permute_1 %>%
 # recover rate
 recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_perm$ID))
 # false discovery rate
-fdr <- c(fdr, mean(!(single_perm$ID %in% oracle_snps$ID)))
+fdr <- c(fdr, sum(!(single_perm$ID %in% oracle_snps$ID)))
 
 # Single Imputation Negation
 single_neg <- imputed_rf_negate_1 %>%
@@ -99,7 +99,7 @@ single_neg <- imputed_rf_negate_1 %>%
 # recover rate
 recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_neg$ID))
 # false discovery rate
-fdr <- c(fdr, mean(!(single_neg$ID %in% oracle_snps$ID)))
+fdr <- c(fdr, sum(!(single_neg$ID %in% oracle_snps$ID)))
 
 names(recover_rate) <- c("SI Mean", "SI RF", "SI LR", "SI Perm", "SI Neg")
 ```
@@ -114,7 +114,7 @@ select(rsid, mean.beta, mean.se, mean.p) %>%
 # recover rate
 recover_rate_synsurr <- mean(oracle_snps$ID %in% synsurr_mean$ID)
 # false discovery rate
-fdr_synsurr <- mean(!(synsurr_mean$ID %in% oracle_snps$ID))
+fdr_synsurr <- sum(!(synsurr_mean$ID %in% oracle_snps$ID))
 
 # SynSurr Random Forest
 synsurr_rf <- synsurr_results %>%
@@ -125,7 +125,7 @@ select(rsid, rf.beta, rf.se, rf.p) %>%
 # recover rate
 recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_rf$ID))
 # false discovery rate
-fdr_synsurr <- c(fdr_synsurr, mean(!(synsurr_rf$ID %in% oracle_snps$ID)))
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_rf$ID %in% oracle_snps$ID)))
 
 # SynSurr Linear Regression
 synsurr_lr <- synsurr_results %>%
@@ -136,7 +136,7 @@ select(rsid, linear.beta, linear.se, linear.p) %>%
 # recover rate
 recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_lr$ID))
 # false discovery rate
-fdr_synsurr <- c(fdr_synsurr, mean(!(synsurr_lr$ID %in% oracle_snps$ID)))
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_lr$ID %in% oracle_snps$ID)))
 
 # SynSurr Permutation
 synsurr_perm <- synsurr_results %>%
@@ -147,7 +147,7 @@ select(rsid, permute.beta, permute.se, permute.p) %>%
 # recover rate
 recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_perm$ID))
 # false discovery rate
-fdr_synsurr <- c(fdr_synsurr, mean(!(synsurr_perm$ID %in% oracle_snps$ID)))
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_perm$ID %in% oracle_snps$ID)))
 
 # SynSurr Negation
 synsurr_neg <- synsurr_results %>%
@@ -158,7 +158,7 @@ select(rsid, negate.beta, negate.se, negate.p) %>%
 # recover rate
 recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_neg$ID))
 # false discovery rate
-fdr_synsurr <- c(fdr_synsurr, mean(!(synsurr_neg$ID %in% oracle_snps$ID)))
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_neg$ID %in% oracle_snps$ID)))
 
 names(recover_rate_synsurr) <- c("SynSurr Mean", "SynSurr RF", "SynSurr LR", "SynSurr Perm", "SynSurr Neg")
 ```
@@ -190,7 +190,7 @@ filter(P < 5e-8)
 # recover rate
 recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_rf$ID))
 # false positive rate
-fdr_mi <- c(fdr_mi, mean(!mi_rf$ID %in% oracle_snps$ID))
+fdr_mi <- c(fdr_mi, sum(!mi_rf$ID %in% oracle_snps$ID))
 
 # Multiple Imputation Linear Regression
 # combine all the results using rubin's rule
@@ -212,7 +212,7 @@ filter(P < 5e-8)
 # recover rate
 recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_lr$ID))
 # false positive rate
-fdr_mi <- c(fdr_mi, mean(!mi_lr$ID %in% oracle_snps$ID))
+fdr_mi <- c(fdr_mi, sum(!mi_lr$ID %in% oracle_snps$ID))
 
 # Multiple Imputation Permutation
 # combine all the results using rubin's rule
@@ -234,7 +234,7 @@ filter(P < 5e-8)
 # recover rate
 recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_perm$ID))
 # false positive rate
-fdr_mi <- c(fdr_mi, mean(!mi_perm$ID %in% oracle_snps$ID))
+fdr_mi <- c(fdr_mi, sum(!mi_perm$ID %in% oracle_snps$ID))
 
 # Multiple Imputation Negation
 # combine all the results using rubin's rule
@@ -257,7 +257,7 @@ filter(P < 5e-8)
 recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_neg$ID))
 names(recover_rate_mi) <- c("MI mean", "MI RF", "MI LR", "MI Perm", "MI Neg")
 # false positive rate
-fdr_mi <- c(fdr_mi, mean(!mi_neg$ID %in% oracle_snps$ID))
+fdr_mi <- c(fdr_mi, sum(!mi_neg$ID %in% oracle_snps$ID))
 ```
 
 ## Recover Rate
@@ -265,27 +265,27 @@ fdr_mi <- c(fdr_mi, mean(!mi_neg$ID %in% oracle_snps$ID))
 ```{r}
 # combine all the results
 n_oracle <- nrow(oracle_snps)
-n_SI_mean <- nrow(single_mean)
-n_SI_rf <- nrow(single_rf)
-n_SI_lr <- nrow(single_lr)
-n_SI_perm <- nrow(single_perm)
-n_SI_neg <- nrow(single_neg)
+n_SI_mean <- nrow(single_mean %>% inner_join(oracle_snps, by = "ID"))
+n_SI_rf <- nrow(single_rf%>% inner_join(oracle_snps, by = "ID"))
+n_SI_lr <- nrow(single_lr%>% inner_join(oracle_snps, by = "ID"))
+n_SI_perm <- nrow(single_perm%>% inner_join(oracle_snps, by = "ID"))
+n_SI_neg <- nrow(single_neg%>% inner_join(oracle_snps, by = "ID"))
 SI_out <- c(n_oracle, paste0(n_SI_mean, "(", round(recover_rate[1],2)*100, "%" ,")"), paste0(n_SI_rf, "(", round(recover_rate[2],2)*100, "%" ,")"), paste0(n_SI_lr, "(", round(recover_rate[3],2)*100, "%" ,")"), paste0(n_SI_perm, "(", round(recover_rate[4],2)*100, "%" ,")"), paste0(n_SI_neg, "(", round(recover_rate[5],2)*100, "%" ,")"))
 
 
 n_MI_mean <- NA
-n_MI_rf <- nrow(mi_rf)
-n_MI_lr <- nrow(mi_lr)
-n_MI_perm <- nrow(mi_perm)
-n_MI_neg <- nrow(mi_neg)
+n_MI_rf <- nrow(mi_rf%>% inner_join(oracle_snps, by = "ID"))
+n_MI_lr <- nrow(mi_lr%>% inner_join(oracle_snps, by = "ID"))
+n_MI_perm <- nrow(mi_perm%>% inner_join(oracle_snps, by = "ID"))
+n_MI_neg <- nrow(mi_neg%>% inner_join(oracle_snps, by = "ID"))
 MI_out <- c(n_oracle, paste0(n_MI_mean, "(", round(recover_rate_mi[1],2)*100, "%" ,")"), paste0(n_MI_rf, "(", round(recover_rate_mi[2],2)*100, "%" ,")"), paste0(n_MI_lr, "(", round(recover_rate_mi[3],2)*100, "%" ,")"), paste0(n_MI_perm, "(", round(recover_rate_mi[4],2)*100, "%" ,")"), paste0(n_MI_neg, "(", round(recover_rate_mi[5],2)*100, "%" ,")"))
 
 
-n_synsurr_mean <- nrow(synsurr_mean)
-n_synsurr_rf <- nrow(synsurr_rf)
-n_synsurr_lr <- nrow(synsurr_lr)
-n_synsurr_perm <- nrow(synsurr_perm)
-n_synsurr_neg <- nrow(synsurr_neg)
+n_synsurr_mean <- nrow(synsurr_mean%>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_rf <- nrow(synsurr_rf%>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_lr <- nrow(synsurr_lr%>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_perm <- nrow(synsurr_perm%>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_neg <- nrow(synsurr_neg%>% inner_join(oracle_snps, by = "ID"))
 SynSurr_out <- c(n_oracle, paste0(n_synsurr_mean, "(", round(recover_rate_synsurr[1],2)*100, "%" ,")"), paste0(n_synsurr_rf, "(", round(recover_rate_synsurr[2],2)*100, "%" ,")"), paste0(n_synsurr_lr, "(", round(recover_rate_synsurr[3],2)*100, "%" ,")"), paste0(n_synsurr_perm, "(", round(recover_rate_synsurr[4],2)*100, "%" ,")"), paste0(n_synsurr_neg, "(", round(recover_rate_synsurr[5],2)*100, "%" ,")"))
 
 out <- rbind(SI_out, MI_out, SynSurr_out) %>% as.data.frame() %>% 
@@ -293,16 +293,16 @@ out <- rbind(SI_out, MI_out, SynSurr_out) %>% as.data.frame() %>%
 row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
 out %>% knitr::kable()
 ```
-## False Positive Rate
+
+## Number of False Positives
 
 ```{r}
 out <- rbind(fdr, fdr_mi, fdr_synsurr) %>% as.data.frame() %>% 
-    rename(Mean = V1, RF = V2, LR = V3, Perm = V4, Neg = V5) %>%
-    round(4) * 100
+    rename(Mean = V1, RF = V2, LR = V3, Perm = V4, Neg = V5) 
 row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
-out$Neg[1:2] <- 0
 out %>% knitr::kable()
 ```
+
 # Effect size
 
 ```{r}
