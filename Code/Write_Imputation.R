@@ -205,16 +205,12 @@ saveRDS(test %>%
 
 # FEV1 Analysis ============================================================
 setwd("Data/Old/")
-missing_rate = 0
+missing_rate = 0.5
 field <- 20150
 
-test <- create_missing_phenotypes(field = field, 
-                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
 
 # White British
 ancestry <- fread("Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
-
-test <- test %>% inner_join(ancestry, by = "f.eid")
 
 # train data
 train <- create_missing_phenotypes(field = field, 
@@ -232,15 +228,14 @@ test <- merge_data(pdata = test, field = 20150)
 # merge with White British
 test <- test %>% inner_join(ancestry, by = "f.eid")
 
-# add covriates
-weight <- fread("height.tab") %>% select(f.eid, f.21002.0.0, f.50.0.0)
+# load FEV1 tab
+fev1 <- fread("FEV1.tab") %>% select(f.eid, f.20150.0.0)
+train <- train %>% inner_join(fev1, by = "f.eid")
+test <- test %>% inner_join(fev1, by = "f.eid")
 
-# merge with train and test
-train <- train %>% inner_join(weight, by = "f.eid")
-test <- test %>% inner_join(weight, by = "f.eid")
 
 # covariate columns
-cov_column <- c("f.21022.0.0", "f.22001.0.0", "f.21002.0.0", "f.48.0.0")
+cov_column <- c("f.21022.0.0", "f.22001.0.0", "f.50.0.0", "f.48.0.0", "f.49.0.0", "f.20160.0.0", "f.21001.0.0", "f.23105.0.0", "f.23106.0.0")
 
 # remove missing covaraites and phenotypes for training
 train <- train %>%
@@ -353,7 +348,7 @@ write.table(test %>%
   select(f.eid, starts_with("imputed_"), oracle) %>%
   mutate(IID = f.eid) %>%
   select(f.eid, IID, starts_with("imputed"), oracle) %>%
-  rename(`#FID` = f.eid), "height_imputed.txt",
+  rename(`#FID` = f.eid), "fev1_imputed.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
@@ -362,7 +357,7 @@ write.table(test %>%
   select(f.eid, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
   mutate(IID = f.eid) %>%
   select(f.eid, IID, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
-  rename(`#FID` = f.eid), "height_covariate.txt",
+  rename(`#FID` = f.eid), "fev1_covariate.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
@@ -372,7 +367,7 @@ saveRDS(test %>%
     f.eid, int, imputed_rf_1, imputed_linear_1,
     imputed_rf_permute_1, imputed_rf_negate_1, imputed_mean,
     f.22001.0.0, f.21022.0.0, starts_with("PC")
-  ), "height_imputed.rds")
+  ), "fev1_imputed.rds")
 
 
 write.table(temp %>%
