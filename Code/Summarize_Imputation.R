@@ -240,10 +240,226 @@ recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_neg$ID))
 names(recover_rate_mi) <- c("MI mean", "MI RF", "MI LR", "MI Perm", "MI Neg")
 # false positive rate
 fdr_mi <- c(fdr_mi, mean(!mi_neg$ID %in% oracle_snps$ID))
+names(fdr_mi) <- c("MI mean", "MI RF", "MI LR", "MI Perm", "MI Neg")
 
-# combine all the results
-c(recover_rate, recover_rate_synsurr, recover_rate_mi)
-c(fdr, fdr_synsurr, fdr_mi)
+# combine all recover rates
+n_oracle <- nrow(oracle_snps)
+n_SI_mean <- nrow(single_mean)
+n_SI_rf <- nrow(single_rf)
+n_SI_lr <- nrow(single_lr)
+n_SI_perm <- nrow(single_perm)
+n_SI_neg <- nrow(single_neg)
+SI_out <- c(n_oracle, paste0(n_SI_mean, "(", round(recover_rate[1],2)*100, "%" ,")"), paste0(n_SI_rf, "(", round(recover_rate[2],2)*100, "%" ,")"), paste0(n_SI_lr, "(", round(recover_rate[3],2)*100, "%" ,")"), paste0(n_SI_perm, "(", round(recover_rate[4],2)*100, "%" ,")"), paste0(n_SI_neg, "(", round(recover_rate[5],2)*100, "%" ,")"))
+
+
+n_MI_mean <- nrow(mi_mean)
+n_MI_rf <- nrow(mi_rf)
+n_MI_lr <- nrow(mi_lr)
+n_MI_perm <- nrow(mi_perm)
+n_MI_neg <- nrow(mi_neg)
+MI_out <- c(n_oracle, paste0(n_MI_mean, "(", round(recover_rate_mi[1],2)*100, "%" ,")"), paste0(n_MI_rf, "(", round(recover_rate_mi[2],2)*100, "%" ,")"), paste0(n_MI_lr, "(", round(recover_rate_mi[3],2)*100, "%" ,")"), paste0(n_MI_perm, "(", round(recover_rate_mi[4],2)*100, "%" ,")"), paste0(n_MI_neg, "(", round(recover_rate_mi[5],2)*100, "%" ,")"))
+
+
+n_synsurr_mean <- nrow(synsurr_mean)
+n_synsurr_rf <- nrow(synsurr_rf)
+n_synsurr_lr <- nrow(synsurr_lr)
+n_synsurr_perm <- nrow(synsurr_perm)
+n_synsurr_neg <- nrow(synsurr_neg)
+SynSurr_out <- c(n_oracle, paste0(n_synsurr_mean, "(", round(recover_rate_synsurr[1],2)*100, "%" ,")"), paste0(n_synsurr_rf, "(", round(recover_rate_synsurr[2],2)*100, "%" ,")"), paste0(n_synsurr_lr, "(", round(recover_rate_synsurr[3],2)*100, "%" ,")"), paste0(n_synsurr_perm, "(", round(recover_rate_synsurr[4],2)*100, "%" ,")"), paste0(n_synsurr_neg, "(", round(recover_rate_synsurr[5],2)*100, "%" ,")"))
+
+out <- rbind(SI_out, MI_out, SynSurr_out) %>% as.data.frame() %>% 
+    rename(Oracle = V1, Mean = V2, RF = V3, LR = V4, Perm = V5, Neg = V6)
+row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
+out %>% knitr::kable()
+
+# combine all false positive rates
+out <- rbind(fdr, fdr_mi, fdr_synsurr) %>% as.data.frame() %>% 
+    rename(Mean = V1, RF = V2, LR = V3, Perm = V4, Neg = V5) %>%
+    round(2)
+row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
+out %>% knitr::kable()
+
+# Plot Effect Size ==============
+library(ggplot2)
+temp <- oracle_snps %>% left_join(synsurr_results %>% rename(ID = rsid))
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_mean %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Mean Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p2 <- temp %>% 
+    ggplot(aes(x = BETA, y = as.numeric(mean.beta))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SynSurr Mean Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+
+ggpubr::ggarrange(p1, p2, ncol = 2, nrow = 1)
+
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_linear_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Linear Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p2 <- temp %>% 
+    ggplot(aes(x = BETA, y = as.numeric(linear.beta))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SynSurr Linear Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p3 <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_linear_1[imputed_linear_1$ID %in% oracle_snps$ID, "BETA"] + 
+imputed_linear_2[imputed_linear_2$ID %in% oracle_snps$ID, "BETA"] + 
+imputed_linear_3[imputed_linear_3$ID %in% oracle_snps$ID, "BETA"] + 
+imputed_linear_4[imputed_linear_4$ID %in% oracle_snps$ID, "BETA"] + 
+imputed_linear_5[imputed_linear_5$ID %in% oracle_snps$ID, "BETA"]))/5) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "MI Linear Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI RF Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p2 <- temp %>% 
+    ggplot(aes(x = BETA, y = as.numeric(rf.beta))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SynSurr RF Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p3 <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_1[imputed_rf_1$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_2[imputed_rf_2$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_3[imputed_rf_3$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_4[imputed_rf_4$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_5[imputed_rf_5$ID %in% oracle_snps$ID, "BETA"]))/5) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "MI RF Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf_permute_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Permute Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p2 <- temp %>% 
+    ggplot(aes(x = BETA, y = as.numeric(permute.beta))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SynSurr Permute Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p3 <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_permute_1[imputed_rf_permute_1$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_permute_2[imputed_rf_permute_2$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_permute_3[imputed_rf_permute_3$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_permute_4[imputed_rf_permute_4$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_permute_5[imputed_rf_permute_5$ID %in% oracle_snps$ID, "BETA"]))/5) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "MI Permute Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf_negate_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Negate Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p2 <- temp %>%
+    ggplot(aes(x = BETA, y = as.numeric(negate.beta))) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SynSurr Negate Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+p3 <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_negate_1[imputed_rf_negate_1$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_negate_2[imputed_rf_negate_2$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_negate_3[imputed_rf_negate_3$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_negate_4[imputed_rf_negate_4$ID %in% oracle_snps$ID, "BETA"] +
+imputed_rf_negate_5[imputed_rf_negate_5$ID %in% oracle_snps$ID, "BETA"]))/5) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "MI Negate Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)+
+    ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+ 
+
+
+
+
+data.frame(x = oracle_snps$BETA, y = imputed_linear_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Linear Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)
+
+data.frame(x = oracle_snps$BETA, y = imputed_rf_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI RF Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)
+
+data.frame(x = oracle_snps$BETA, y = imputed_rf_permute_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Perm Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)
+
+data.frame(x = oracle_snps$BETA, y = imputed_rf_negate_1 %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>% 
+    ggplot(aes(x = x, y = y)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1, col = 'red') +
+    theme_bw() +
+    labs(x = "Oracle Effect Size", y = "SI Neg Effect Size") +
+    geom_smooth(method = "lm", se = FALSE)
+
+
+
+
 
 # FEV1 ===========================
 
