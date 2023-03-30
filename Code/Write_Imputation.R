@@ -5,58 +5,82 @@ library(randomForest)
 
 styler::style_file("Code/Write_Imputation.R")
 
+
+# Helper Functions ============================================================
+create_missing_phenotypes <- function(field, in_id_file, rate, seed = 123) {
+  temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
+  in_id <- fread(in_id_file) %>% rename(f.eid = `#FID`) %>% select(-IID)
+  temp <- temp %>% inner_join(in_id) %>% filter(!is.na(int))
+
+  # number of missing phenotypes
+  nmissing <- floor(nrow(temp) * rate)
+
+  set.seed(seed)
+  missing_index <- sample(which(!is.na(temp$int)), size = nmissing)
+  
+  #oracle
+  temp$oracle <- temp$int
+  
+  # set phenotype missing value
+  temp[missing_index, ]$int <- NA
+  return(data.frame(temp %>% select(-paste0("f.", field, ".0.0"))))
+}
+
+merge_data <- function(pdata, field = field, int = TRUE) {
+  rf_model <- readRDS(paste0("prediected_", field, ".rds"))
+  if (int) {
+    k <- 0.375
+    n <- nrow(rf_model)
+    r <- rank(rf_model$yhat)
+    rf_model$yhat <- qnorm((r - k) / (n - 2 * k + 1))
+  }
+  return(rf_model %>% inner_join(pdata, by = "f.eid"))
+}
+
 # Height Analysis ============================================================
-# Load data
-height <- fread("Data/height.tab")
+setwd("Data/Old/")
+missing_rate = 0.5
 field <- 50
 
-# Split data into train and test
-in_id <- fread("Data/final.king.cutoff.in.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
+# White British
+ancestry <- fread("Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
 
-out_id <- fread("Data/final.king.cutoff.out.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
+# train data
+train <- create_missing_phenotypes(field = field, 
+                                   in_id_file = "final.king.cutoff.out.id", rate = missing_rate)
 
-ancestry <- fread("Data/Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
+# merge with White British
+train <- train %>% inner_join(ancestry, by = "f.eid")
 
-# drop if covariates are missing
-cov_column <- colnames(height %>%
-  dplyr::select(-paste0("f.", field, ".0.0")))[grep(
-  ".0.0$",
-  colnames(height %>% dplyr::select(-paste0("f.", field, ".0.0")))
-)]
-# remove ethnicity
-cov_column <- cov_column[!cov_column %in% c("f.22006.0.0", "f.21000.0.0")]
+# test data
+test <- create_missing_phenotypes(field = field, 
+                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
 
-train <- height %>%
-  inner_join(out_id) %>%
-  inner_join(ancestry) %>%
+test <- merge_data(pdata = test)
+
+# merge with White British
+test <- test %>% inner_join(ancestry, by = "f.eid")
+
+# add covriates
+weight <- fread("height.tab") %>% select(f.eid, f.21002.0.0, f.50.0.0)
+
+# merge with train and test
+train <- train %>% inner_join(weight, by = "f.eid")
+test <- test %>% inner_join(weight, by = "f.eid")
+
+# covariate columns
+cov_column <- c("f.21022.0.0", "f.22001.0.0", "f.21002.0.0", "f.48.0.0")
+
+# remove missing covaraites and phenotypes for training
+train <- train %>%
   tidyr::drop_na(paste0("f.", field, ".0.0")) %>%
   tidyr::drop_na(all_of(cov_column)) %>%
   select(paste0("f.", field, ".0.0"), all_of(cov_column))
 
-test <- height %>%
-  inner_join(in_id) %>%
-  inner_join(ancestry) %>%
-  tidyr::drop_na(all_of(cov_column)) %>%
-  select(f.eid, paste0("f.", field, ".0.0"), all_of(cov_column))
-
-# oracle
-test$oracle <- test %>% pull(paste0("f.", field, ".0.0"))
-
-# Create 50% missing data
-set.seed(123)
-nmissing <- floor(nrow(test) * 0.5)
-missing_index <- sample(which(!is.na(test %>%
-  pull(paste0("f.", field, ".0.0")))), nmissing)
-test[missing_index, paste0("f.", field, ".0.0")] <- NA
-sum(is.na(test %>% pull(paste0("f.", field, ".0.0"))))
 test_temp <- test %>%
-  select(-f.eid, -oracle) %>%
+  tidyr::drop_na(all_of(cov_column)) %>%
+  select(paste0("f.", field, ".0.0"), all_of(cov_column)) %>%
   mutate(!!paste0("f.", field, ".0.0") := NA) # Only use train data to train
-
 
 # Multiple Random Forest Imputation
 # impute 5 times
@@ -91,9 +115,18 @@ for (m in 1:5) {
 }
 
 # Add mean imputation
-train_mean <- train %>%
-  pull(paste0("f.", field, ".0.0")) %>%
-  mean()
+test_imputed_mean <- mice(
+  data = rbind(
+    train %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0),
+    test_temp %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0)
+  ),
+  method = "mean",
+  seed = 123,
+  m = 1
+)
+
+# missing index in test
+missing_index <- which(is.na(test$int))
 
 # Merge imputed data
 for (m in 1:5) {
@@ -138,109 +171,87 @@ for (m in 1:5) {
 # Add mean imputation
 test <- test %>% mutate(!!paste0("imputed_mean") :=
   .data[[paste0("f.", field, ".0.0")]])
-test[[paste0("imputed_mean")]][missing_index] <- train_mean
+test[[paste0("imputed_mean")]][missing_index] <- test_imputed_mean$imp[[paste0("f.", field, ".0.0")]][missing_index, 1]
 # inverse normal transformation to imputed data
 test[[paste0("imputed_mean")]] <-
   qnorm((rank(test[[paste0("imputed_mean")]]) - 0.375) /
     (nrow(test) - 2 * 0.375 + 1))
 
-# Inverse normal transformation to oracle data
-oracle_missing <- which(is.na(test$oracle))
-test_complete <- test[-oracle_missing, ]
-test_missing <- test[oracle_missing, ]
-test_complete$oracle_int <- qnorm((rank(test_complete %>%
-  pull(oracle)) - 0.375) / (nrow(test_complete) - 2 * 0.375 + 1))
-test_missing$oracle_int <- NA
-test <- rbind(test_complete, test_missing)
-
-# Inverse normal transformation to original data
-missing_index <- which(is.na(test %>% pull(paste0("f.", field, ".0.0"))))
-test_complete <- test[-missing_index, ]
-test_missing <- test[missing_index, ]
-test_complete$int <- qnorm((rank(test_complete %>%
-  pull(paste0("f.", field, ".0.0"))) - 0.375) /
-  (nrow(test_complete) - 2 * 0.375 + 1))
-test_missing$int <- NA
-test <- rbind(test_complete, test_missing)
-
 # Write imputed data to txt file
 write.table(test %>%
-  select(f.eid, starts_with("imputed_"), oracle_int) %>%
+  select(f.eid, starts_with("imputed_"), oracle) %>%
   mutate(IID = f.eid) %>%
-  select(f.eid, IID, starts_with("imputed"), oracle_int) %>%
-  rename(`#FID` = f.eid), "Data/height_imputed.txt",
+  select(f.eid, IID, starts_with("imputed"), oracle) %>%
+  rename(`#FID` = f.eid), "height_imputed.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
-# Merge genetic PC
-pcs <- fread("UKB_PC.tab")[, 1:11]
-colnames(pcs) <- c("f.eid", paste0("PC", 1:10))
-test <- test %>% inner_join(pcs, by = "f.eid")
-
-# writr covariate data to txt file
+# write covariate data to txt file
 write.table(test %>%
   select(f.eid, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
   mutate(IID = f.eid) %>%
   select(f.eid, IID, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
-  rename(`#FID` = f.eid), "Data/height_covariate.txt",
+  rename(`#FID` = f.eid), "height_covariate.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
 # write imputed data to Run SynSurr
 saveRDS(test %>%
   select(
-    f.eid, oracle_int, int, imputed_rf_1, imputed_linear_1,
+    f.eid, int, imputed_rf_1, imputed_linear_1,
     imputed_rf_permute_1, imputed_rf_negate_1, imputed_mean,
     f.22001.0.0, f.21022.0.0, starts_with("PC")
-  ), "Data/height_imputed.rds")
+  ), "height_imputed.rds")
 
 # FEV1 Analysis ============================================================
-# Load data
-fev1 <- fread("Data/FEV1.tab")
+setwd("Data/Old/")
+missing_rate = 0
 field <- 20150
 
-# Split data into train and test
-in_id <- fread("Data/final.king.cutoff.in.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
+test <- create_missing_phenotypes(field = field, 
+                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
 
-out_id <- fread("Data/final.king.cutoff.out.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
+# White British
+ancestry <- fread("Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
 
-ancestry <- fread("Data/Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
+test <- test %>% inner_join(ancestry, by = "f.eid")
 
-# drop if covariates are missing
-cov_column <- colnames(fev1 %>% dplyr::select(-paste0("f.", field, ".0.0")))[grep(".0.0$", colnames(fev1 %>% dplyr::select(-paste0("f.", field, ".0.0"))))]
-train <- fev1 %>%
-  inner_join(out_id) %>%
-  inner_join(ancestry) %>%
+# train data
+train <- create_missing_phenotypes(field = field, 
+                                   in_id_file = "final.king.cutoff.out.id", rate = missing_rate)
+
+# merge with White British
+train <- train %>% inner_join(ancestry, by = "f.eid")
+
+# test data
+test <- create_missing_phenotypes(field = field, 
+                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
+
+test <- merge_data(pdata = test, field = 20150)
+
+# merge with White British
+test <- test %>% inner_join(ancestry, by = "f.eid")
+
+# add covriates
+weight <- fread("height.tab") %>% select(f.eid, f.21002.0.0, f.50.0.0)
+
+# merge with train and test
+train <- train %>% inner_join(weight, by = "f.eid")
+test <- test %>% inner_join(weight, by = "f.eid")
+
+# covariate columns
+cov_column <- c("f.21022.0.0", "f.22001.0.0", "f.21002.0.0", "f.48.0.0")
+
+# remove missing covaraites and phenotypes for training
+train <- train %>%
   tidyr::drop_na(paste0("f.", field, ".0.0")) %>%
   tidyr::drop_na(all_of(cov_column)) %>%
   select(paste0("f.", field, ".0.0"), all_of(cov_column))
 
-test <- fev1 %>%
-  inner_join(in_id) %>%
-  inner_join(ancestry) %>%
-  tidyr::drop_na(all_of(cov_column)) %>%
-  select(f.eid, paste0("f.", field, ".0.0"), all_of(cov_column))
-
-
-
-# oracle
-test$oracle <- test %>% pull(paste0("f.", field, ".0.0"))
-
-# Create 50% missing data
-set.seed(123)
-nmissing <- floor(nrow(test) * 0.5)
-missing_index <- sample(which(!is.na(test %>%
-  pull(paste0("f.", field, ".0.0")))), nmissing)
-test[missing_index, paste0("f.", field, ".0.0")] <- NA
-sum(is.na(test %>% pull(paste0("f.", field, ".0.0"))))
 test_temp <- test %>%
-  select(-f.eid, -oracle) %>%
+  tidyr::drop_na(all_of(cov_column)) %>%
+  select(paste0("f.", field, ".0.0"), all_of(cov_column)) %>%
   mutate(!!paste0("f.", field, ".0.0") := NA) # Only use train data to train
-
 
 # Multiple Random Forest Imputation
 # impute 5 times
@@ -275,11 +286,20 @@ for (m in 1:5) {
 }
 
 # Add mean imputation
-train_mean <- train %>%
-  pull(paste0("f.", field, ".0.0")) %>%
-  mean()
+test_imputed_mean <- mice(
+  data = rbind(
+    train %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0),
+    test_temp %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0)
+  ),
+  method = "mean",
+  seed = 123,
+  m = 1
+)
 
-  # Merge imputed data
+# missing index in test
+missing_index <- which(is.na(test$int))
+
+# Merge imputed data
 for (m in 1:5) {
   test <- test %>% mutate(!!paste0("imputed_rf_", m) :=
     .data[[paste0("f.", field, ".0.0")]])
@@ -322,58 +342,54 @@ for (m in 1:5) {
 # Add mean imputation
 test <- test %>% mutate(!!paste0("imputed_mean") :=
   .data[[paste0("f.", field, ".0.0")]])
-test[[paste0("imputed_mean")]][missing_index] <- train_mean
+test[[paste0("imputed_mean")]][missing_index] <- test_imputed_mean$imp[[paste0("f.", field, ".0.0")]][missing_index, 1]
 # inverse normal transformation to imputed data
 test[[paste0("imputed_mean")]] <-
   qnorm((rank(test[[paste0("imputed_mean")]]) - 0.375) /
     (nrow(test) - 2 * 0.375 + 1))
 
-# Inverse normal transformation to oracle data
-oracle_missing <- which(is.na(test$oracle))
-test_complete <- test[-oracle_missing, ]
-test_missing <- test[oracle_missing, ]
-test_complete$oracle_int <- qnorm((rank(test_complete %>%
-  pull(oracle)) - 0.375) / (nrow(test_complete) - 2 * 0.375 + 1))
-test_missing$oracle_int <- NA
-test <- rbind(test_complete, test_missing)
-
-# Inverse normal transformation to original data
-missing_index <- which(is.na(test %>% pull(paste0("f.", field, ".0.0"))))
-test_complete <- test[-missing_index, ]
-test_missing <- test[missing_index, ]
-test_complete$int <- qnorm((rank(test_complete %>%
-  pull(paste0("f.", field, ".0.0"))) - 0.375) /
-  (nrow(test_complete) - 2 * 0.375 + 1))
-test_missing$int <- NA
-test <- rbind(test_complete, test_missing)
-
 # Write imputed data to txt file
 write.table(test %>%
-  select(f.eid, starts_with("imputed_"), oracle_int) %>%
+  select(f.eid, starts_with("imputed_"), oracle) %>%
   mutate(IID = f.eid) %>%
-  select(f.eid, IID, starts_with("imputed"), oracle_int) %>%
-  rename(`#FID` = f.eid), "Data/FEV1_imputed.txt",
+  select(f.eid, IID, starts_with("imputed"), oracle) %>%
+  rename(`#FID` = f.eid), "height_imputed.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
-# Merge genetic PC
-pcs <- fread("UKB_PC.tab")[, 1:11]
-colnames(pcs) <- c("f.eid", paste0("PC", 1:10))
-test <- test %>% inner_join(pcs, by = "f.eid")
-
-# writr covariate data to txt file
+# write covariate data to txt file
 write.table(test %>%
   select(f.eid, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
   mutate(IID = f.eid) %>%
   select(f.eid, IID, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
-  rename(`#FID` = f.eid), "Data/FEV1_covariate.txt",
+  rename(`#FID` = f.eid), "height_covariate.txt",
 sep = "\t", row.names = FALSE, quote = FALSE
 )
 
 # write imputed data to Run SynSurr
 saveRDS(test %>%
   select(
-    f.eid, oracle_int, int, imputed_rf_1, imputed_linear_1,
+    f.eid, int, imputed_rf_1, imputed_linear_1,
     imputed_rf_permute_1, imputed_rf_negate_1, imputed_mean,
     f.22001.0.0, f.21022.0.0, starts_with("PC")
-  ), "Data/FEV1_imputed.rds")
+  ), "height_imputed.rds")
+
+
+write.table(temp %>%
+  select(f.eid, int) %>%
+  mutate(IID = f.eid) %>%
+  select(f.eid, IID, int) %>%
+  rename(`#FID` = f.eid), "fev1_oracle.txt",
+sep = "\t", row.names = FALSE, quote = FALSE)
+
+write.table(temp %>%
+  select(f.eid, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
+  mutate(IID = f.eid) %>%
+  select(f.eid, IID, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
+  rename(`#FID` = f.eid), "fev1_covariate.txt",
+sep = "\t", row.names = FALSE, quote = FALSE
+)
+
+temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
+in_id <- readRDS("in.id.rds") # test data
+temp <- temp %>% filter(f.eid %in% in_id) %>% filter(!is.na(int))
