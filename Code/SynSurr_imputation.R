@@ -5,7 +5,7 @@ library(doParallel)
 library(BEDMatrix)
 
 # read in the data
-pheno <- readRDS("Data/FEV1_imputed.rds")
+pheno <- readRDS("Data/Old/height_imputed.rds")
 
 # read in the genetic data
 G <- BEDMatrix::BEDMatrix(path = "Data/allchromosome.bed", simple_names = TRUE)
@@ -86,14 +86,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
                 filter(Outcome == "Target" & Coefficient == "g_complete") %>%
                 select(Point, SE, p) %>% as.numeric())
 
-            # add oracle
-            assoc.oracle <- lm(oracle_int ~ ., data = data.frame(
-                cbind(pheno %>% select(oracle_int, f.21022.0.0, f.22001.0.0, starts_with("PC")), g)
-            ))
-            out <- c(out, summary(assoc.oracle)$coefficients["g", c(1, 2, 4)])
-
-
-            vas <- c("rf", "linear", "permute", "negate", "mean", "oracle")
+            vas <- c("rf", "linear", "permute", "negate", "mean")
             vis <- c("beta", "se", "p")
             out <- c(colnames(G)[i], out)
             names(out) <- c(
@@ -113,4 +106,4 @@ stopCluster(cl)
 results <- do.call(rbind, results)
 results <- data.frame(results)
 
-saveRDS(results, "Data/SynSurr_FEV1.rds")
+saveRDS(results, "Data/Old/SynSurr_height.rds")
