@@ -9,18 +9,22 @@ styler::style_file("Code/Write_Imputation.R")
 # Helper Functions ============================================================
 create_missing_phenotypes <- function(field, in_id_file, rate, seed = 123) {
   temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
-  in_id <- fread(in_id_file) %>% rename(f.eid = `#FID`) %>% select(-IID)
-  temp <- temp %>% inner_join(in_id) %>% filter(!is.na(int))
+  in_id <- fread(in_id_file) %>%
+    rename(f.eid = `#FID`) %>%
+    select(-IID)
+  temp <- temp %>%
+    inner_join(in_id) %>%
+    filter(!is.na(int))
 
   # number of missing phenotypes
   nmissing <- floor(nrow(temp) * rate)
 
   set.seed(seed)
   missing_index <- sample(which(!is.na(temp$int)), size = nmissing)
-  
-  #oracle
+
+  # oracle
   temp$oracle <- temp$int
-  
+
   # set phenotype missing value
   temp[missing_index, ]$int <- NA
   return(data.frame(temp %>% select(-paste0("f.", field, ".0.0"))))
@@ -39,22 +43,26 @@ merge_data <- function(pdata, field = field, int = TRUE) {
 
 # Height Analysis ============================================================
 setwd("Data/Old/")
-missing_rate = 0.5
+missing_rate <- 0.5
 field <- 50
 
 # White British
 ancestry <- fread("Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
 
 # train data
-train <- create_missing_phenotypes(field = field, 
-                                   in_id_file = "final.king.cutoff.out.id", rate = missing_rate)
+train <- create_missing_phenotypes(
+  field = field,
+  in_id_file = "final.king.cutoff.out.id", rate = missing_rate
+)
 
 # merge with White British
 train <- train %>% inner_join(ancestry, by = "f.eid")
 
 # test data
-test <- create_missing_phenotypes(field = field, 
-                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
+test <- create_missing_phenotypes(
+  field = field,
+  in_id_file = "final.king.cutoff.in.id", rate = missing_rate
+)
 
 test <- merge_data(pdata = test)
 
@@ -205,7 +213,7 @@ saveRDS(test %>%
 
 # FEV1 Analysis ============================================================
 setwd("Data/Old/")
-missing_rate = 0.5
+missing_rate <- 0.5
 field <- 20150
 
 
@@ -213,15 +221,19 @@ field <- 20150
 ancestry <- fread("Ancestry.tab") %>% filter(!is.na(f.22006.0.0))
 
 # train data
-train <- create_missing_phenotypes(field = field, 
-                                   in_id_file = "final.king.cutoff.out.id", rate = missing_rate)
+train <- create_missing_phenotypes(
+  field = field,
+  in_id_file = "final.king.cutoff.out.id", rate = missing_rate
+)
 
 # merge with White British
 train <- train %>% inner_join(ancestry, by = "f.eid")
 
 # test data
-test <- create_missing_phenotypes(field = field, 
-                                  in_id_file = "final.king.cutoff.in.id", rate = missing_rate)
+test <- create_missing_phenotypes(
+  field = field,
+  in_id_file = "final.king.cutoff.in.id", rate = missing_rate
+)
 
 test <- merge_data(pdata = test, field = 20150)
 
@@ -375,7 +387,8 @@ write.table(temp %>%
   mutate(IID = f.eid) %>%
   select(f.eid, IID, int) %>%
   rename(`#FID` = f.eid), "fev1_oracle.txt",
-sep = "\t", row.names = FALSE, quote = FALSE)
+sep = "\t", row.names = FALSE, quote = FALSE
+)
 
 write.table(temp %>%
   select(f.eid, f.21022.0.0, f.22001.0.0, starts_with("PC")) %>%
@@ -387,4 +400,6 @@ sep = "\t", row.names = FALSE, quote = FALSE
 
 temp <- readRDS(paste0("field_", field, "_cleaned.rds")) # cleaned pheno + cov
 in_id <- readRDS("in.id.rds") # test data
-temp <- temp %>% filter(f.eid %in% in_id) %>% filter(!is.na(int))
+temp <- temp %>%
+  filter(f.eid %in% in_id) %>%
+  filter(!is.na(int))
