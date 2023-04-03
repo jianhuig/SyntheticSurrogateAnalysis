@@ -35,7 +35,7 @@ for(filename in filenames){
     std_discov <- temp %>%
         filter(standard_discovery_p < 5e-8)
     std_valid <- temp %>%
-        filter(standard_validation_p < 0.05/nrow(std_discov))
+        filter(standard_validation_p < 0.05)
     # recover rate
     std_recov <- nrow(std_valid %>% filter(standard_discovery_p < 5e-8))
     std_recov_rate <- std_recov/nrow(std_discov)
@@ -43,7 +43,7 @@ for(filename in filenames){
     synsurr_discov <- temp %>%
         filter(synsurr_discovery_p < 5e-8)
     synsurr_valid <- temp %>%
-        filter(synsurr_validation_p < 0.05/nrow(synsurr_discov))
+        filter(synsurr_validation_p < 0.05)
     # recover rate
     synsurr_recov <- nrow(synsurr_valid %>% filter(synsurr_discovery_p < 5e-8))
     synsurr_recov_rate <- synsurr_recov/nrow(synsurr_discov)
