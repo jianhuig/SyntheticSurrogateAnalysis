@@ -1,6 +1,6 @@
 library(data.table)
 library(dplyr)
-library(bigsnpr)
+#library(bigsnpr)
 library(doParallel)
 library(BEDMatrix)
 
@@ -40,7 +40,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
             # SynSurr with random forest
             fit.binormal <- SurrogateRegression::FitBNR(
                 t = pheno$int[!is.na(g)],
-                s = pheno$imputed_rf_1[!is.na(g)],
+                s = pheno$yhat[!is.na(g)],
                 X = X.cov
             )
             out <- fit.binormal@Regression.tab %>%
@@ -50,7 +50,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
             # SynSurr with linear regression
             fit.binormal <- SurrogateRegression::FitBNR(
                 t = pheno$int[!is.na(g)],
-                s = pheno$imputed_linear_1[!is.na(g)],
+                s = pheno$imputed_linear[!is.na(g)],
                 X = X.cov
             )
             out <- c(out, fit.binormal @Regression.tab %>%
@@ -59,7 +59,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
             # SynSurr with permuted
             fit.binormal <- SurrogateRegression::FitBNR(
                 t = pheno$int[!is.na(g)],
-                s = pheno$imputed_rf_permute_1[!is.na(g)],
+                s = sample(pheno$yhat[!is.na(g)]),
                 X = X.cov
             )
             out <- c(out, fit.binormal @Regression.tab %>%
@@ -69,7 +69,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
             # SynSurr with negative random forest
             fit.binormal <- SurrogateRegression::FitBNR(
                 t = pheno$int[!is.na(g)],
-                s = -pheno$imputed_rf_1[!is.na(g)],
+                s = -pheno$yhat[!is.na(g)],
                 X = X.cov
             )
             out <- c(out, fit.binormal @Regression.tab %>%
