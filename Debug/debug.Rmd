@@ -58,31 +58,37 @@ summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov - 1))
 
 
 # SynSurr with linear regression
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = pheno$imputed_linear[!is.na(g)],
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 
 # SynSurr with permuted outcome
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = permuted,
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 
 # Check Random Forest
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov - 1))
 # SynSurr with permuted outcome
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = pheno$yhat[!is.na(g)],
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 ```			
 
 # FEV1
@@ -126,29 +132,35 @@ summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov - 1))
 
 
 # SynSurr with linear regression
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = pheno$imputed_linear[!is.na(g)],
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 
 # SynSurr with permuted outcome
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = permuted,
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 
 # Check Random Forest
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov - 1))
 # SynSurr with permuted outcome
-SurrogateRegression::FitBNR(
+fit <- SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
   s = pheno$yhat[!is.na(g)],
   X = X.cov
-)@Regression.tab %>%
+)
+fit@Regression.tab %>%
   filter(Outcome == "Target" & Coefficient == "g_complete")
+round(fit@Covariance, digits = 3)
 ```			
