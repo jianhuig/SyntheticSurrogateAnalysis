@@ -1,0 +1,154 @@
+---
+title: "Debug SynSurr"
+output:
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(dplyr)
+library(data.table)
+library(dplyr)
+library(doParallel)
+library(BEDMatrix)
+```
+
+# Height
+
+```{r}
+# read in the data
+pheno <- readRDS("Data/Old/height_imputed.rds")
+
+# read in the genetic data
+G <- BEDMatrix::BEDMatrix(path = "Data/allchromosome.bed", simple_names = TRUE)
+
+# a random SNP
+i <- sample(1:ncol(G), size = 1)
+print(i)
+g <- as.numeric(G[as.character(pheno$f.eid), i]) # snp i
+length(g)
+g_complete <- g[!is.na(g)]
+length(g_complete)
+X.cov <- cbind(
+  g_complete,
+  (pheno %>%
+    select(
+      f.21022.0.0, f.22001.0.0,
+      starts_with("PC")
+    ))[!is.na(g), ]
+)
+dim(X.cov)
+colnames(X.cov)
+X.cov <- scale(X.cov)
+X.cov <- cbind(X.cov, rep(1, nrow(X.cov))) # append intercept
+X.cov[, 1] <- g_complete # dont scale G
+X.cov[, 3] <- pheno$f.22001.0.0[!is.na(g)] # dont scale sex
+
+
+# Check Imputed Linear
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)]))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov))
+
+
+# Check Permuted Outcome
+permuted <- sample(pheno$yhat[!is.na(g)])
+summary(lm(pheno$int[!is.na(g)] ~ permuted))
+summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov))
+
+
+# SynSurr with linear regression
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = pheno$imputed_linear[!is.na(g)],
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+
+# SynSurr with permuted outcome
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = permuted,
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+
+# Check Random Forest
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov))
+# SynSurr with permuted outcome
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = pheno$yhat[!is.na(g)],
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+```			
+
+# FEV1
+
+```{r}
+# read in the data
+pheno <- readRDS("Data/Old/fev1_imputed.rds")
+
+# a random SNP
+i <- sample(1:ncol(G), size = 1)
+print(i)
+g <- as.numeric(G[as.character(pheno$f.eid), i]) # snp i
+length(g)
+g_complete <- g[!is.na(g)]
+length(g_complete)
+X.cov <- cbind(
+  g_complete,
+  (pheno %>%
+    select(
+      f.21022.0.0, f.22001.0.0,
+      starts_with("PC")
+    ))[!is.na(g), ]
+)
+dim(X.cov)
+colnames(X.cov)
+X.cov <- scale(X.cov)
+X.cov <- cbind(X.cov, rep(1, nrow(X.cov))) # append intercept
+X.cov[, 1] <- g_complete # dont scale G
+X.cov[, 3] <- pheno$f.22001.0.0[!is.na(g)] # dont scale sex
+
+
+# Check Imputed Linear
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)]))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov))
+
+
+# Check Permuted Outcome
+permuted <- sample(pheno$yhat[!is.na(g)])
+summary(lm(pheno$int[!is.na(g)] ~ permuted))
+summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov))
+
+
+# SynSurr with linear regression
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = pheno$imputed_linear[!is.na(g)],
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+
+# SynSurr with permuted outcome
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = permuted,
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+
+# Check Random Forest
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov))
+# SynSurr with permuted outcome
+SurrogateRegression::FitBNR(
+  t = pheno$int[!is.na(g)],
+  s = pheno$yhat[!is.na(g)],
+  X = X.cov
+)@Regression.tab %>%
+  filter(Outcome == "Target" & Coefficient == "g_complete")
+```			
