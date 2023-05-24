@@ -1,0 +1,195 @@
+---
+title: "FEV1"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+setwd("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/")
+library(ggplot2)
+library(dplyr)
+```
+
+# Description
+## UK Biobank Population
+
+The data release contains genotypes of 488,377 UK Biobank participants, and 825,927 markers are genotyped.
+
+## Quality control
+
+The following QC steps are conducted
+
+-   Exclude inviduals with \> 10% missing genotypes.
+
+-   Exclude SNPs with maf \< 0.05
+
+-   Include only SNPs with a 90% genotyping rate
+
+-   Exclude markers that failure the Hardy-Weinberg test at 0.001
+
+-   Include only White-British population ( Code 1001 in Data field 21000, self reported)
+
+-   LD pruning. Window size = 50 SNPs, pairwise LD \> 0.5 is removed.
+
+-   Exclude one member of each pair of samples with kinship coefficient greater than 0.117. (First degree relatives are removed)
+
+After QC steps and removing individuals with missing age, sex, or phenotype height, 408207 samples and 211,587 genetic markers remained.
+
+## FEV1 Prediction
+
+
+
+In total, 25697 individuals were removed in the association analysis due to being first-degree relatives with other people. After excluding people with missing weight, 23030 remaining individuals served as training set. The covariates are age, sex, waist circumference, hip circumference, height, smoking status, BMI, basal metabolic rate and impedance of whole body.
+
+```{r}
+temp <- read.table(file = "/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/FEV1.tab", header = TRUE)
+yhat <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/EHR_research/SyntheticSurrogateAnalysis/Data/prediected_20150.rds")
+temp %>%
+  inner_join(yhat) %>%
+  ggplot(aes(x = f.20150.0.0, y = yhat)) +
+  geom_point() +
+  geom_abline(slope = 1, col = "red") +
+  xlab("Observed FEV1") +
+  ylab("Predicted FEV1") +
+  ggtitle("Random Forest Prediction")
+```
+
+
+
+
+# Relative efficiency
+```{r}
+id <- 20150
+
+result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", 0, ".rds"))
+
+true_snp_index <- which(result$oracle.p < 5e-8)
+
+avg_chisq <- c()
+
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+  result <- result[true_snp_index, ]
+  chisq.orcale <- (result$oracle.beta / result$oracle.se)^2
+  chisq.marginal <- (result$marginal.beta / result$marginal.se)^2
+  chisq.bi <- (result$bi.beta / result$bi.se)^2
+  avg_chisq <- rbind(avg_chisq, c(mean(chisq.orcale), mean(chisq.marginal), mean(chisq.bi)))
+}
+colnames(avg_chisq) <- c("oracle", "marginal", "bivariate")
+avg_chisq <- avg_chisq %>%
+  data.frame() %>%
+  mutate(missing = c(0, 0.25, 0.5, 0.75, 0.9))
+
+tidyr::gather(avg_chisq, method, chisq, colnames(avg_chisq)[1:3]) %>% ggplot(aes(x = missing, y = chisq, group = method, color = method)) +
+  geom_point() +
+  geom_line() +
+  ylab(expression(Mean ~ chi^2)) +
+  xlab("Percent of phenotype missingness")
+
+avg_chisq %>% ggplot(aes(x = c(0, 0.25, 0.5, 0.75, 0.9), y = bivariate / marginal)) +
+  geom_point() +
+  geom_line() +
+  xlab("Rercent of phenotype missingness") +
+  ylab("Relative efficiency")
+```
+
+# Estimated Effect Size
+```{r}
+betas <- c()
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+  result <- result[true_snp_index, ]
+  betas <- rbind(betas, cbind(i, result$oracle.beta, result$marginal.beta, result$bi.beta))
+}
+colnames(betas) <- c("missing", "oracle", "marginal", "bivariate")
+missing_names <- c(
+  `0` = "Missing Rate = 0%",
+  `0.25` = "Missing Rate = 25%",
+  `0.5` = "Missing Rate = 50%",
+  `0.75` = "Missing Rate = 75%",
+  `0.9` = "Missing Rate = 90%"
+)
+
+plot <- betas %>%
+  data.frame() %>%
+  tidyr::gather(method, beta, c("marginal", "bivariate")) %>%
+  filter(method == "marginal") %>%
+  ggplot(aes(x = oracle, y = beta)) +
+  geom_point() +
+  facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
+  xlim(c(-0.1, 0.1)) +
+  ylim(c(-0.1, 0.1)) +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  xlab(expression(beta[oracle])) +
+  ylab(expression(beta[standard])) +
+  theme_bw()
+
+ggsave(
+  plot = plot,
+  filename = "effectsize_FEV1_marginal.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
+
+plot <- betas %>%
+  data.frame() %>%
+  tidyr::gather(method, beta, c("marginal", "bivariate")) %>%
+  filter(method == "bivariate") %>%
+  ggplot(aes(x = oracle, y = beta)) +
+  geom_point() +
+  facet_wrap(. ~ missing, labeller = as_labeller(missing_names)) +
+  xlim(c(-0.1, 0.1)) +
+  ylim(c(-0.1, 0.1)) +
+  geom_smooth(method = "lm") +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  xlab(expression(beta[oracle])) +
+  ylab(expression(beta[SynSurr])) +
+  theme_bw()
+ggsave(
+  plot = plot,
+  filename = "effectsize_FEV1.png",
+  device = "png",
+  height = 6,
+  width = 7.5,
+  units = "in",
+  dpi = 360
+)
+```
+
+# FN and FP
+```{r}
+metric <- c()
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+  metric <- rbind(metric, c(
+    i,
+    sum(result$marginal.p[true_snp_index] < 5e-8),
+    sum(result$bi.p[true_snp_index] < 5e-8)
+  ))
+}
+colnames(metric) <- c("missing", "FNR:marginal", "FPR:marginal", "FNR:binormal", "FPR:binormal")
+metric %>%
+  data.frame() %>%
+  knitr::kable(booktaps = TRUE)
+
+
+metric <- c()
+for (i in c(0, 0.25, 0.5, 0.75, 0.9)) {
+  result <- readRDS(paste0("~/Desktop/SyntheticSurrogateAnalysis/Data/binormal_field=", id, "_nmissing=", i, ".rds"))
+  metric <- rbind(metric, c(
+    i,
+    mean(result$marginal.p[true_snp_index] > 5e-8),
+    mean(result$marginal.p[-true_snp_index] < 5e-8),
+    mean(result$bi.p[true_snp_index] > 5e-8),
+    mean(result$bi.p[-true_snp_index] < 5e-8)
+  ))
+}
+colnames(metric) <- c("missing", "FNR:marginal", "FPR:marginal", "FNR:binormal", "FPR:binormal")
+metric %>%
+  data.frame() %>%
+  knitr::kable(booktaps = TRUE)
+```
