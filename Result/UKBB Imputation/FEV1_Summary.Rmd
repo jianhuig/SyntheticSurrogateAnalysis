@@ -1,0 +1,538 @@
+---
+title: "UKB Imputation"
+author: "Jianhui Gao"
+date: "2023-03-30"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(dplyr)
+library(ggplot2)
+```
+
+# FEV1
+
+```{r}
+# read all files with .linear extension
+filenames <- list.files(
+  path = "FEV1/",
+  pattern = ".linear",
+  full.names = TRUE
+)
+
+# get the names of the files
+# only keep everything after plink2
+# and before .linear
+
+for (filename in filenames) {
+  # get the name of the file
+  name <- gsub("(?:[^.]+\\.)([^.]+).*", "\\1", filename)
+  temp <- data.table::fread(filename)
+  assign(paste0(name), temp)
+}
+
+# read SynSurr results
+synsurr_results <- readRDS("FEV1/SynSurr_fev1.rds")
+```
+
+```{r}
+# SNPs with p < 5e-8
+oracle_snps <- oracle %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# Single Imputation Mean
+single_mean <- imputed_mean %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# recover rate
+recover_rate <- c()
+recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_mean$ID))
+
+# false discovery rate
+fdr <- c()
+fdr <- c(fdr, sum(!(single_mean$ID %in% oracle_snps$ID)))
+
+# Single Impuation Random Forest
+single_rf <- imputed_rf %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# recover rate
+recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_rf$ID))
+# false discovery rate
+fdr <- c(fdr, sum(!(single_rf$ID %in% oracle_snps$ID)))
+
+# Single Imputation Linear Regression
+single_lr <- imputed_linear %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# recover rate
+recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_lr$ID))
+# false discovery rate
+fdr <- c(fdr, sum(!(single_lr$ID %in% oracle_snps$ID)))
+
+# Single Imputation Permutation
+single_perm <- imputed_rf_permute %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# recover rate
+recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_perm$ID))
+# false discovery rate
+fdr <- c(fdr, sum(!(single_perm$ID %in% oracle_snps$ID)))
+
+# Single Imputation Negation
+single_neg <- imputed_rf_negate %>%
+  data.frame() %>%
+  select(ID, BETA, SE, P) %>%
+  filter(P < 5e-8)
+
+# recover rate
+recover_rate <- c(recover_rate, mean(oracle_snps$ID %in% single_neg$ID))
+# false discovery rate
+fdr <- c(fdr, sum(!(single_neg$ID %in% oracle_snps$ID)))
+
+names(recover_rate) <- c("SI Mean", "SI RF", "SI LR", "SI Perm", "SI Neg")
+```
+
+```{r}
+# SynSurr Mean
+synsurr_mean <- synsurr_results %>%
+  select(rsid, mean.beta, mean.se, mean.p) %>%
+  rename(ID = rsid, BETA = mean.beta, SE = mean.se, P = mean.p) %>%
+  mutate(BETA = as.numeric(BETA), SE = as.numeric(SE), P = as.numeric(P)) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_synsurr <- NA
+# false discovery rate
+fdr_synsurr <- sum(!(synsurr_mean$ID %in% oracle_snps$ID))
+
+# SynSurr Random Forest
+synsurr_rf <- synsurr_results %>%
+  select(rsid, rf.beta, rf.se, rf.p) %>%
+  rename(ID = rsid, BETA = rf.beta, SE = rf.se, P = rf.p) %>%
+  mutate(BETA = as.numeric(BETA), SE = as.numeric(SE), P = as.numeric(P)) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_rf$ID))
+# false discovery rate
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_rf$ID %in% oracle_snps$ID)))
+
+# SynSurr Linear Regression
+synsurr_lr <- synsurr_results %>%
+  select(rsid, linear.beta, linear.se, linear.p) %>%
+  rename(ID = rsid, BETA = linear.beta, SE = linear.se, P = linear.p) %>%
+  mutate(BETA = as.numeric(BETA), SE = as.numeric(SE), P = as.numeric(P)) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_lr$ID))
+# false discovery rate
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_lr$ID %in% oracle_snps$ID)))
+
+# SynSurr Permutation
+synsurr_perm <- synsurr_results %>%
+  select(rsid, permute.beta, permute.se, permute.p) %>%
+  rename(ID = rsid, BETA = permute.beta, SE = permute.se, P = permute.p) %>%
+  mutate(BETA = as.numeric(BETA), SE = as.numeric(SE), P = as.numeric(P)) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_perm$ID))
+# false discovery rate
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_perm$ID %in% oracle_snps$ID)))
+
+# SynSurr Negation
+synsurr_neg <- synsurr_results %>%
+  select(rsid, negate.beta, negate.se, negate.p) %>%
+  rename(ID = rsid, BETA = negate.beta, SE = negate.se, P = negate.p) %>%
+  mutate(BETA = as.numeric(BETA), SE = as.numeric(SE), P = as.numeric(P)) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_synsurr <- c(recover_rate_synsurr, mean(oracle_snps$ID %in% synsurr_neg$ID))
+# false discovery rate
+fdr_synsurr <- c(fdr_synsurr, sum(!(synsurr_neg$ID %in% oracle_snps$ID)))
+
+names(recover_rate_synsurr) <- c("SynSurr Mean", "SynSurr RF", "SynSurr LR", "SynSurr Perm", "SynSurr Neg")
+```
+
+```{r}
+# Multiple Imputation Mean
+# recover rate
+recover_rate_mi <- c(NA)
+# false discovery rate
+fdr_mi <- c(NA)
+
+# Multiple Impuation Random Forest
+# combine all the results using rubin's rule
+mi_rf <- imputed_rf_1 %>%
+  select(ID, BETA, SE, P) %>%
+  inner_join(imputed_rf_2 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_3 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_4 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_5 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  mutate(
+    beta_pooled = (BETA.x + BETA.y + BETA.x.x + BETA.y.y + BETA) / 5,
+    within_variance = (SE.x^2 + SE.y^2 + SE.x.x^2 + SE.y.y^2 + SE^2) / 5,
+    between_variance = (BETA.x - beta_pooled)^2 / 4 + (BETA.y - beta_pooled)^2 / 4 + (BETA.x.x - beta_pooled)^2 / 4 + (BETA.y.y - beta_pooled)^2 / 4 + (BETA - beta_pooled)^2 / 4,
+    se_pooled = sqrt(within_variance + between_variance + between_variance / 5),
+    t_pooled = beta_pooled / se_pooled,
+    lambda = (between_variance + between_variance / 5) / (within_variance + between_variance + between_variance / 5),
+    p_pooled = 2 * pt(-abs(t_pooled), df = 4 / lambda^2)
+  ) %>%
+  select(ID, beta_pooled, se_pooled, p_pooled) %>%
+  rename(BETA = beta_pooled, SE = se_pooled, P = p_pooled) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_rf$ID))
+# false positive rate
+fdr_mi <- c(fdr_mi, sum(!mi_rf$ID %in% oracle_snps$ID))
+
+# Multiple Imputation Linear Regression
+# combine all the results using rubin's rule
+mi_lr <- imputed_linear_1 %>%
+  select(ID, BETA, SE, P) %>%
+  inner_join(imputed_linear_2 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_linear_3 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_linear_4 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_linear_5 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  mutate(
+    beta_pooled = (BETA.x + BETA.y + BETA.x.x + BETA.y.y + BETA) / 5,
+    within_variance = (SE.x^2 + SE.y^2 + SE.x.x^2 + SE.y.y^2 + SE^2) / 5,
+    between_variance = (BETA.x - beta_pooled)^2 / 4 + (BETA.y - beta_pooled)^2 / 4 + (BETA.x.x - beta_pooled)^2 / 4 + (BETA.y.y - beta_pooled)^2 / 4 + (BETA - beta_pooled)^2 / 4,
+    se_pooled = sqrt(within_variance + between_variance + between_variance / 5),
+    t_pooled = beta_pooled / se_pooled,
+    lambda = (between_variance + between_variance / 5) / (within_variance + between_variance + between_variance / 5),
+    p_pooled = 2 * pt(-abs(t_pooled), df = 4 / lambda^2)
+  ) %>%
+  select(ID, beta_pooled, se_pooled, p_pooled) %>%
+  rename(BETA = beta_pooled, SE = se_pooled, P = p_pooled) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_lr$ID))
+# false positive rate
+fdr_mi <- c(fdr_mi, sum(!mi_lr$ID %in% oracle_snps$ID))
+
+# Multiple Imputation Permutation
+# combine all the results using rubin's rule
+mi_perm <- imputed_rf_permute_1 %>%
+  select(ID, BETA, SE, P) %>%
+  inner_join(imputed_rf_permute_2 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_permute_3 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_permute_4 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_permute_5 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  mutate(
+    beta_pooled = (BETA.x + BETA.y + BETA.x.x + BETA.y.y + BETA) / 5,
+    within_variance = (SE.x^2 + SE.y^2 + SE.x.x^2 + SE.y.y^2 + SE^2) / 5,
+    between_variance = (BETA.x - beta_pooled)^2 / 4 + (BETA.y - beta_pooled)^2 / 4 + (BETA.x.x - beta_pooled)^2 / 4 + (BETA.y.y - beta_pooled)^2 / 4 + (BETA - beta_pooled)^2 / 4,
+    se_pooled = sqrt(within_variance + between_variance + between_variance / (5 - 1)),
+    t_pooled = beta_pooled / se_pooled,
+    lambda = (between_variance + between_variance / (5 - 1)) / (within_variance + between_variance + between_variance / (5 - 1)),
+    p_pooled = 2 * pt(-abs(t_pooled), df = 4 / lambda^2)
+  ) %>%
+  select(ID, beta_pooled, se_pooled, p_pooled) %>%
+  rename(BETA = beta_pooled, SE = se_pooled, P = p_pooled) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_perm$ID))
+# false positive rate
+fdr_mi <- c(fdr_mi, sum(!mi_perm$ID %in% oracle_snps$ID))
+
+# Multiple Imputation Negation
+# combine all the results using rubin's rule
+mi_neg <- imputed_rf_negate_1 %>%
+  select(ID, BETA, SE, P) %>%
+  inner_join(imputed_rf_negate_2 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_negate_3 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_negate_4 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  inner_join(imputed_rf_negate_5 %>% select(ID, BETA, SE, P), by = "ID") %>%
+  mutate(
+    beta_pooled = (BETA.x + BETA.y + BETA.x.x + BETA.y.y + BETA) / 5,
+    within_variance = (SE.x^2 + SE.y^2 + SE.x.x^2 + SE.y.y^2 + SE^2) / 5,
+    between_variance = (BETA.x - beta_pooled)^2 / 4 + (BETA.y - beta_pooled)^2 / 4 + (BETA.x.x - beta_pooled)^2 / 4 + (BETA.y.y - beta_pooled)^2 / 4 + (BETA - beta_pooled)^2 / 4,
+    se_pooled = sqrt(within_variance + between_variance + between_variance / (5 - 1)),
+    t_pooled = beta_pooled / se_pooled,
+    lambda = (between_variance + between_variance / (5 - 1)) / (within_variance + between_variance + between_variance / (5 - 1)),
+    p_pooled = 2 * pt(-abs(t_pooled), df = 4 / lambda^2)
+  ) %>%
+  select(ID, beta_pooled, se_pooled, p_pooled) %>%
+  rename(BETA = beta_pooled, SE = se_pooled, P = p_pooled) %>%
+  filter(P < 5e-8)
+# recover rate
+recover_rate_mi <- c(recover_rate_mi, mean(oracle_snps$ID %in% mi_neg$ID))
+names(recover_rate_mi) <- c("MI mean", "MI RF", "MI LR", "MI Perm", "MI Neg")
+# false positive rate
+fdr_mi <- c(fdr_mi, sum(!mi_neg$ID %in% oracle_snps$ID))
+```
+
+## Recover Rate
+
+```{r}
+# combine all the results
+n_oracle <- nrow(oracle_snps)
+n_SI_mean <- nrow(single_mean %>% inner_join(oracle_snps, by = "ID"))
+n_SI_rf <- nrow(single_rf %>% inner_join(oracle_snps, by = "ID"))
+n_SI_lr <- nrow(single_lr %>% inner_join(oracle_snps, by = "ID"))
+n_SI_perm <- nrow(single_perm %>% inner_join(oracle_snps, by = "ID"))
+n_SI_neg <- nrow(single_neg %>% inner_join(oracle_snps, by = "ID"))
+SI_out <- c(n_oracle, paste0(n_SI_mean, "(", round(recover_rate[1], 2) * 100, "%", ")"), paste0(n_SI_rf, "(", round(recover_rate[2], 2) * 100, "%", ")"), paste0(n_SI_lr, "(", round(recover_rate[3], 2) * 100, "%", ")"), paste0(n_SI_perm, "(", round(recover_rate[4], 2) * 100, "%", ")"), paste0(n_SI_neg, "(", round(recover_rate[5], 2) * 100, "%", ")"))
+
+
+n_MI_mean <- NA
+n_MI_rf <- nrow(mi_rf %>% inner_join(oracle_snps, by = "ID"))
+n_MI_lr <- nrow(mi_lr %>% inner_join(oracle_snps, by = "ID"))
+n_MI_perm <- nrow(mi_perm %>% inner_join(oracle_snps, by = "ID"))
+n_MI_neg <- nrow(mi_neg %>% inner_join(oracle_snps, by = "ID"))
+MI_out <- c(n_oracle, paste0(n_MI_mean, "(", round(recover_rate_mi[1], 2) * 100, "%", ")"), paste0(n_MI_rf, "(", round(recover_rate_mi[2], 2) * 100, "%", ")"), paste0(n_MI_lr, "(", round(recover_rate_mi[3], 2) * 100, "%", ")"), paste0(n_MI_perm, "(", round(recover_rate_mi[4], 2) * 100, "%", ")"), paste0(n_MI_neg, "(", round(recover_rate_mi[5], 2) * 100, "%", ")"))
+
+
+n_synsurr_mean <- NA
+n_synsurr_rf <- nrow(synsurr_rf %>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_lr <- nrow(synsurr_lr %>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_perm <- nrow(synsurr_perm %>% inner_join(oracle_snps, by = "ID"))
+n_synsurr_neg <- nrow(synsurr_neg %>% inner_join(oracle_snps, by = "ID"))
+SynSurr_out <- c(n_oracle, paste0(n_synsurr_mean, "(", round(recover_rate_synsurr[1], 2) * 100, "%", ")"), paste0(n_synsurr_rf, "(", round(recover_rate_synsurr[2], 2) * 100, "%", ")"), paste0(n_synsurr_lr, "(", round(recover_rate_synsurr[3], 2) * 100, "%", ")"), paste0(n_synsurr_perm, "(", round(recover_rate_synsurr[4], 2) * 100, "%", ")"), paste0(n_synsurr_neg, "(", round(recover_rate_synsurr[5], 2) * 100, "%", ")"))
+
+out <- rbind(SI_out, MI_out, SynSurr_out) %>%
+  as.data.frame() %>%
+  rename(Oracle = V1, Mean = V2, RF = V3, LR = V4, Perm = V5, Neg = V6)
+row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
+out$Mean[2] <- out$Mean[3] <- "--"
+out  %>% knitr::kable()
+```
+
+## Number of False Positives
+
+```{r}
+out <- rbind(fdr, fdr_mi, fdr_synsurr) %>%
+  as.data.frame() %>%
+  rename(Mean = V1, RF = V2, LR = V3, Perm = V4, Neg = V5)
+row.names(out) <- c("Single Imputation", "Multiple Imputation", "Synthetic Surr")
+out$Mean[2] <- out$Mean[3] <- "--"
+out  %>% knitr::kable()
+```
+
+# Effect size
+
+```{r, fig.width=6, fig.height=3, include=FALSE}
+temp <- oracle_snps %>% left_join(synsurr_results %>% rename(ID = rsid))
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_mean %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SI Mean Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(imputed_mean %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA) ~ oracle_snps$BETA))[2], 2))), parse = TRUE
+  )
+p2 <- temp %>%
+  ggplot(aes(x = BETA, y = as.numeric(mean.beta))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SynSurr Mean Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(as.numeric(temp$mean.beta) ~ temp$BETA))[2], 2))), parse = TRUE
+  )
+
+ggpubr::ggarrange(p1, p2, ncol = 2, nrow = 1)
+```
+
+```{r, fig.width=9, fig.height=3}
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_linear %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SI Linear Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(imputed_linear %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA) ~ oracle_snps$BETA))[2], 2))), parse = TRUE
+  )
+p2 <- temp %>%
+  ggplot(aes(x = BETA, y = as.numeric(linear.beta))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SynSurr Linear Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = -.03, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(as.numeric(temp$linear.beta) ~ temp$BETA))[2], 2))), parse = TRUE
+  )
+dat <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_linear_1[imputed_linear_1$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_linear_2[imputed_linear_2$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_linear_3[imputed_linear_3$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_linear_4[imputed_linear_4$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_linear_5[imputed_linear_5$ID %in% oracle_snps$ID, "BETA"])) / 5)
+p3 <- dat %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "MI Linear Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = 0,
+    y = 0.03,
+    label = (paste0("slope==", round(coef(lm(dat$y ~ dat$x))[2], 2))), parse = TRUE
+  )
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+```
+
+```{r, fig.width=9, fig.height=3}
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SI RF Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(imputed_rf %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA) ~ oracle_snps$BETA))[2], 2))), parse = TRUE
+  )
+p2 <- temp %>%
+  ggplot(aes(x = BETA, y = as.numeric(rf.beta))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SynSurr RF Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = -0.03, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(as.numeric(temp$rf.beta) ~ temp$BETA))[2], 2))), parse = TRUE
+  )
+dat <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_1[imputed_rf_1$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_2[imputed_rf_2$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_3[imputed_rf_3$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_4[imputed_rf_4$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_5[imputed_rf_5$ID %in% oracle_snps$ID, "BETA"])) / 5) 
+p3 <- dat %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "MI RF Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..)) +
+  annotate("text",
+    x = 0,
+    y = 0.03,
+    label = (paste0("slope==", round(coef(lm(dat$y ~ dat$x))[2], 2))), parse = TRUE
+  )
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+```
+
+```{r, fig.width=9, fig.height=3}
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf_permute %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SI Permute Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(imputed_rf_permute %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA) ~ oracle_snps$BETA))[2], 2))), parse = TRUE
+  )
+p2 <- temp %>%
+  ggplot(aes(x = BETA, y = as.numeric(permute.beta))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SynSurr Permute Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = -0.03, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(as.numeric(temp$permute.beta) ~ temp$BETA))[2], 2))), parse = TRUE
+  )
+dat <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_permute_1[imputed_rf_permute_1$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_permute_2[imputed_rf_permute_2$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_permute_3[imputed_rf_permute_3$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_permute_4[imputed_rf_permute_4$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_permute_5[imputed_rf_permute_5$ID %in% oracle_snps$ID, "BETA"])) / 5) 
+p3 <- dat %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "MI Permute Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = 0,
+    y = 0.03,
+    label = (paste0("slope==", round(coef(lm(dat$y ~ dat$x))[2], 2))), parse = TRUE
+  )
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+```
+
+```{r, fig.width=9, fig.height=3}
+p1 <- data.frame(x = oracle_snps$BETA, y = imputed_rf_negate %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SI Negate Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = 0, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(imputed_rf_negate %>% filter(ID %in% oracle_snps$ID) %>% pull(BETA) ~ oracle_snps$BETA))[2], 2))), parse = TRUE
+  )
+p2 <- temp %>%
+  ggplot(aes(x = BETA, y = as.numeric(negate.beta))) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "SynSurr Negate Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = -0.03, y = 0.03,
+    label = (paste0("slope==", round(coef(lm(as.numeric(temp$negate.beta) ~ temp$BETA))[2], 2))), parse = TRUE
+  )
+dat <- data.frame(x = oracle_snps$BETA, y = as.numeric(unlist(imputed_rf_negate_1[imputed_rf_negate_1$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_negate_2[imputed_rf_negate_2$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_negate_3[imputed_rf_negate_3$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_negate_4[imputed_rf_negate_4$ID %in% oracle_snps$ID, "BETA"] +
+  imputed_rf_negate_5[imputed_rf_negate_5$ID %in% oracle_snps$ID, "BETA"])) / 5) 
+p3 <- dat %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, col = "red") +
+  theme_bw() +
+  labs(x = "Oracle Effect Size", y = "MI Negate Effect Size") +
+  geom_smooth(method = "lm", se = FALSE) +
+  ggpubr::stat_regline_equation(label.y = 0.05, aes(label = ..rr.label..))+
+  annotate("text",
+    x = 0,
+    y = 0.03,
+    label = (paste0("slope==", round(coef(lm(dat$y ~ dat$x))[2], 2))), parse = TRUE
+  )
+ggpubr::ggarrange(p1, p2, p3, ncol = 3, nrow = 1)
+```
+
+
