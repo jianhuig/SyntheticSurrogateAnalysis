@@ -48,13 +48,13 @@ X.cov[, 3] <- pheno$f.22001.0.0[!is.na(g)] # dont scale sex
 
 # Check Imputed Linear
 summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)]))
-summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov - 1))
 
 
 # Check Permuted Outcome
 permuted <- sample(pheno$yhat[!is.na(g)])
 summary(lm(pheno$int[!is.na(g)] ~ permuted))
-summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov - 1))
 
 
 # SynSurr with linear regression
@@ -75,7 +75,7 @@ SurrogateRegression::FitBNR(
 
 # Check Random Forest
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
-summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov - 1))
 # SynSurr with permuted outcome
 SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
@@ -116,13 +116,13 @@ X.cov[, 3] <- pheno$f.22001.0.0[!is.na(g)] # dont scale sex
 
 # Check Imputed Linear
 summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)]))
-summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$imputed_linear[!is.na(g)] + X.cov - 1))
 
 
 # Check Permuted Outcome
 permuted <- sample(pheno$yhat[!is.na(g)])
 summary(lm(pheno$int[!is.na(g)] ~ permuted))
-summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ permuted + X.cov - 1))
 
 
 # SynSurr with linear regression
@@ -143,7 +143,7 @@ SurrogateRegression::FitBNR(
 
 # Check Random Forest
 summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)]))
-summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov))
+summary(lm(pheno$int[!is.na(g)] ~ pheno$yhat[!is.na(g)] + X.cov - 1))
 # SynSurr with permuted outcome
 SurrogateRegression::FitBNR(
   t = pheno$int[!is.na(g)],
