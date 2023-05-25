@@ -103,8 +103,8 @@ test_imputed_rf <- mice(
 # impute 5 times
 test_imputed_linear <- mice(
   data = rbind(
-    train %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0),
-    test_temp %>% select(!!paste0("f.", field, ".0.0"), f.21022.0.0, f.22001.0.0)
+    train %>% select(!!paste0("f.", field, ".0.0"), f.48.0.0),
+    test_temp %>% select(!!paste0("f.", field, ".0.0"), f.48.0.0)
   ),
   method = "norm",
   seed = 123
@@ -218,11 +218,9 @@ test[["imputed_rf_permute"]] <- qnorm((rank(test[["imputed_rf_permute"]]) - 0.37
 
 
 # Add Single Linear Imputation
-model <- lm(as.formula(paste0("f.", field, ".0.0", " ~ f.21022.0.0 + f.22001.0.0")), data = train)
+model <- lm(as.formula(paste0("f.", field, ".0.0", " ~ f.48.0.0")), data = train)
 imputed <- predict(model, test_temp)
-test <- test %>% mutate(!!paste0("imputed_linear") :=
-  .data[[paste0("f.", field, ".0.0")]])
-test[[paste0("imputed_linear")]][missing_index] <- imputed[missing_index]
+test <- test %>% mutate(!!paste0("imputed_linear") := imputed)
 # inverse normal transformation to imputed data
 test[["imputed_linear"]] <- qnorm((rank(test[["imputed_linear"]]) - 0.375) /
   (nrow(test) - 2 * 0.375 + 1))
