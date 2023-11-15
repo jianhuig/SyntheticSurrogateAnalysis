@@ -1,3 +1,4 @@
+# setwd('~/Documents/GitHub/SyntheticSurrogateAnalysis/Code')
 source("SynSurrogateSim.R")
 
 library(dplyr)
@@ -7,8 +8,8 @@ n.sim <- 10^4 # number of replicates
 missing_rate <- c(0, 0.25, 0.5, 0.75)
 rho <- c(0, 0.25, 0.5, 0.75)
 
-cl <- makeCluster(type = "MPI")
-# cl <- makeCluster(parallel::detectCores())
+# cl <- makeCluster(type = "MPI")
+cl <- makeCluster(parallel::detectCores())
 registerDoParallel(cl)
 
 result <- foreach(
