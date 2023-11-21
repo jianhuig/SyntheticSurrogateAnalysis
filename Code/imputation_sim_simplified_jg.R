@@ -5,7 +5,8 @@ setwd("~/Documents/GitHub/SyntheticSurrogateAnalysis")
 # Lab/Projects/Synthetic Surrogates/")
 
 
-devtools::install_github(repo = 'zrmacc/SurrogateRegression')
+# devtools::install_github(repo = 'zrmacc/SurrogateRegression')
+
 library(dplyr)
 library(ggplot2)
 library(ggsci)
