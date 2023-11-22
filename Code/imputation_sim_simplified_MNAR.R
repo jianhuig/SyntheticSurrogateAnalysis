@@ -527,3 +527,51 @@ set.seed(110)
 sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = TRUE, 
            ycut_u = 0.9, ycut_l = 0.1)
 
+q <- PlotSim(sim, ana_se = TRUE) +
+  scale_y_continuous(
+    breaks = seq(from = 0.0, to = 0.15, by = 0.05),
+    limits = c(-0.05, 0.15)
+  )
+show(q)
+
+ggsave(
+  plot = q,
+  file = "results/imputation_sim_mnar_balance.png",
+  device = "png",
+  width = 8.0,
+  height = 4.0,
+  units = "in",
+  dpi = 480
+)
+
+
+# Tabulate results.
+tab <- TabulateSim(sim)
+show(tab)
+file <- paste0("Data/imputation_sim_tab_mnar_balance.tsv")
+data.table::fwrite(
+  x = tab,
+  file = file,
+  sep = "\t"
+)
+
+# -----------------------------------------------------------------------------
+# Tabulate result.
+# -----------------------------------------------------------------------------
+
+sim <- data.table::fread(file = "Data/imputation_sim_tab_mnar_balance.tsv")
+tab <- TabulateSim(sim)
+
+order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
+ordered_tab <- tab[order, ]
+
+ordered_tab <- ordered_tab %>%
+  dplyr::select(method, config, est, ase, ese) %>%
+  dplyr::rename(
+    Method = method,
+    "Imputation Model" = config,
+    Estimate = est,
+    "Analytical SE" = ase,
+    "Empirical SE" = ese
+  )
+print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
