@@ -167,8 +167,16 @@ DGP <- function(
   
   # Outcome with missingness based on the value of y.
   # draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
-  draw_u <-  which(y >= quantile(y, ycut_u))
-  draw_l <-  which(y <= quantile(y, ycut_l))
+  if(ycut_u != 1){
+    draw_u <-  which(y >= quantile(y, ycut_u))
+  }else{
+    draw_u <- c()
+  }
+  if(ycut_l != 0){
+    draw_l <-  which(y <= quantile(y, ycut_l))
+  }else{
+    draw_l <- c()
+  }
   draw <- c(draw_l, draw_u)
   yobs <- y
   yobs[draw] <- NA
