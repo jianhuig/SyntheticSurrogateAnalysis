@@ -161,7 +161,7 @@ DGP <- function(
   # Oracle outcome.
   y <- eta + stats::rnorm(n, sd = sqrt(1 - ve))
   
-  # Outcome with missingness.
+  # Outcome with missingness based on the value of y.
   draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
   yobs <- y
   yobs[draw] <- NA
