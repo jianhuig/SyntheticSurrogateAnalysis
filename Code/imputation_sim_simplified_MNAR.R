@@ -525,7 +525,7 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
 # Simulation with correctly specified imputation model.
 set.seed(110)
 sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = TRUE, 
-           ycut_u = 0.9, ycut_l = 0.1)
+           ycut_u = ycut_u, ycut_l = ycut_l)
 
 q <- PlotSim(sim, ana_se = TRUE) +
   scale_y_continuous(
@@ -536,7 +536,7 @@ show(q)
 
 ggsave(
   plot = q,
-  file = "results/imputation_sim_mnar_balance.png",
+  file = paste0("results/imputation_sim_mnar_", setting, ".png"),
   device = "png",
   width = 8.0,
   height = 4.0,
@@ -548,7 +548,7 @@ ggsave(
 # Tabulate results.
 tab <- TabulateSim(sim)
 show(tab)
-file <- paste0("Data/imputation_sim_tab_mnar_balance.tsv")
+file <- paste0("Data/imputation_sim_tab_mnar_", setting, ".tsv")
 data.table::fwrite(
   x = tab,
   file = file,
@@ -559,7 +559,8 @@ data.table::fwrite(
 # Tabulate result.
 # -----------------------------------------------------------------------------
 
-sim <- data.table::fread(file = "Data/imputation_sim_tab_mnar_balance.tsv")
+sim <- data.table::fread(file = paste0("Data/imputation_sim_tab_mnar_", 
+                                       setting, ".tsv"))
 tab <- TabulateSim(sim)
 
 order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
