@@ -28,7 +28,9 @@ Sim <- function(
   n0 = 1e3,
   n1 = 1e4,
   reps = 500,
-  train_indep = TRUE
+  train_indep = TRUE,
+  ycut_u,
+  ycut_l
 ) {
   
   # Imputation scenarios, listing which covariates to include.
@@ -60,10 +62,10 @@ Sim <- function(
     # The same data sets are used for each imputation scenario
     #  to make the results comparable.
     if (train_indep) {
-      train_data <- DGP(n0)
-      eval_data <- DGP(n1)
+      train_data <- DGP(n0, ycut_u = ycut_u, ycut_l = ycut_l)
+      eval_data <- DGP(n1, ycut_u = ycut_u, ycut_l = ycut_l)
     } else {
-      eval_data <- DGP(n1)
+      eval_data <- DGP(n1, ycut_u = ycut_u, ycut_l = ycut_l)
       train_data <- eval_data
     }
     
@@ -147,7 +149,9 @@ DGP <- function(
   bg = sqrt(0.01),
   bx = -0.50,
   miss = 0.25,
-  rho = sqrt(0.5)
+  rho = sqrt(0.5),
+  ycut_u = 0.9,
+  ycut_l = 0.1
 ) {
   
   # Genotype and covariates. G and Z have correlation rho_gz.
@@ -162,7 +166,10 @@ DGP <- function(
   y <- eta + stats::rnorm(n, sd = sqrt(1 - ve))
   
   # Outcome with missingness based on the value of y.
-  draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
+  # draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
+  draw_u <-  which(y >= quantile(y, ycut_u))
+  draw_l <-  which(y <= quantile(y, ycut_l))
+  draw <- c(draw_l, draw_u)
   yobs <- y
   yobs[draw] <- NA
   
@@ -517,58 +524,6 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
 
 # Simulation with correctly specified imputation model.
 set.seed(110)
-sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = FALSE)
+sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = TRUE, 
+           ycut_u = 0.9, ycut_l = 0.1)
 
-# data.table::fwrite(
-#   x = sim,
-#   file = "results/data/imputation_sim_v3.tsv",
-#   sep = "\t"
-# )
-
-q <- PlotSim(sim, ana_se = TRUE) +
-  scale_y_continuous(
-    breaks = seq(from = 0.0, to = 0.15, by = 0.05),
-    limits = c(-0.05, 0.15)
-  )
-show(q)
-
-ggsave(
-  plot = q,
-  file = "results/imputation_sim_v3.png",
-  device = "png",
-  width = 8.0,
-  height = 4.0,
-  units = "in",
-  dpi = 480
-)
-
-# Tabulate results.
-tab <- TabulateSim(sim)
-show(tab)
-file <- paste0("results/data/imputation_sim_tab_v3.0.tsv")
-data.table::fwrite(
-  x = tab,
-  file = file,
-  sep = "\t"
-)
-
-# -----------------------------------------------------------------------------
-# Tabulate result.
-# -----------------------------------------------------------------------------
-
-sim <- data.table::fread(file = "results/data/imputation_sim_v2.tsv")
-tab <- TabulateSim(sim)
-
-order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
-ordered_tab <- tab[order, ]
-
-ordered_tab <- ordered_tab %>%
-  dplyr::select(method, config, est, ase, ese) %>%
-  dplyr::rename(
-    Method = method,
-    "Imputation Model" = config,
-    Estimate = est,
-    "Analytical SE" = ase,
-    "Empirical SE" = ese
-  )
-print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
