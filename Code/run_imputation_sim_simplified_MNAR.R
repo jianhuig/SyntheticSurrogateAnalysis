@@ -21,7 +21,7 @@ source('Code/imputation_sim_simplified_MNAR.R')
 
 # Unbalanced: removal of 10% from top and 5% from bottom
 
-setting <- "unbalances"
+setting <- "unbalanced"
 ycut_u = 0.9
 ycut_l = 0.05
 source('Code/imputation_sim_simplified_MNAR.R')

@@ -1,0 +1,125 @@
+---
+title: "MNAR Results"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyr)
+```
+
+## Balanced: 10% of Y on top and bottom removed
+```{r echo = FALSE, out.width = '95%'}
+setting <- "balanced"
+knitr::include_graphics(paste0("imputation_sim_mnar_", setting, ".png"))
+```
+
+\clearpage
+
+```{r echo = FALSE, results = 'asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data.table::fread(file = paste0("~/Documents/GitHub/SyntheticSurrogateAnalysis/Data/imputation_sim_tab_mnar_", 
+                                       setting, ".tsv"))
+
+order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
+ordered_tab <- tab[order, ]
+
+ordered_tab <- ordered_tab %>%
+  dplyr::select(method, config, est, ase, ese) %>%
+  dplyr::rename(
+    Method = method,
+    "Imputation Model" = config,
+    Estimate = est,
+    "Analytical SE" = ase,
+    "Empirical SE" = ese
+  )
+print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
+```
+
+\clearpage
+
+## Unbalanced: 10% of Y on top and 5% of Y bottom removed
+```{r echo = FALSE, out.width = '95%'}
+setting <- "unbalanced"
+knitr::include_graphics(paste0("imputation_sim_mnar_", setting, ".png"))
+```
+
+\clearpage
+
+```{r echo = FALSE, results = 'asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data.table::fread(file = paste0("~/Documents/GitHub/SyntheticSurrogateAnalysis/Data/imputation_sim_tab_mnar_", 
+                                       setting, ".tsv"))
+
+order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
+ordered_tab <- tab[order, ]
+
+ordered_tab <- ordered_tab %>%
+  dplyr::select(method, config, est, ase, ese) %>%
+  dplyr::rename(
+    Method = method,
+    "Imputation Model" = config,
+    Estimate = est,
+    "Analytical SE" = ase,
+    "Empirical SE" = ese
+  )
+print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
+```
+
+\clearpage
+
+## Top: 10% of Y on top removed
+```{r echo = FALSE, out.width = '95%'}
+setting <- "top"
+knitr::include_graphics(paste0("imputation_sim_mnar_", setting, ".png"))
+```
+
+\clearpage
+
+```{r echo = FALSE, results = 'asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data.table::fread(file = paste0("~/Documents/GitHub/SyntheticSurrogateAnalysis/Data/imputation_sim_tab_mnar_", 
+                                       setting, ".tsv"))
+
+order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
+ordered_tab <- tab[order, ]
+
+ordered_tab <- ordered_tab %>%
+  dplyr::select(method, config, est, ase, ese) %>%
+  dplyr::rename(
+    Method = method,
+    "Imputation Model" = config,
+    Estimate = est,
+    "Analytical SE" = ase,
+    "Empirical SE" = ese
+  )
+print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
+```
+
+\clearpage
+
+## Bottom: 10% of Y on bottom removed
+```{r echo = FALSE, out.width = '95%'}
+setting <- "bottom"
+knitr::include_graphics(paste0("imputation_sim_mnar_", setting, ".png"))
+```
+
+\clearpage
+
+```{r echo = FALSE, results = 'asis', tidy=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+tab <- data.table::fread(file = paste0("~/Documents/GitHub/SyntheticSurrogateAnalysis/Data/imputation_sim_tab_mnar_", 
+                                       setting, ".tsv"))
+
+order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
+ordered_tab <- tab[order, ]
+
+ordered_tab <- ordered_tab %>%
+  dplyr::select(method, config, est, ase, ese) %>%
+  dplyr::rename(
+    Method = method,
+    "Imputation Model" = config,
+    Estimate = est,
+    "Analytical SE" = ase,
+    "Empirical SE" = ese
+  )
+print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
+```
