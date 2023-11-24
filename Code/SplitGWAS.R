@@ -3,47 +3,36 @@ library(dplyr)
 library(bigsnpr)
 library(doParallel)
 library(BEDMatrix)
-
 library(ranger)
-library(readr)
 library(dplyr)
 library(data.table)
 library(tidyr)
 
 # setwd("~/Desktop/SyntheticSurrogateAnalysis/Data")
 
-cov_id <- c("f.21022.0.0", "f.22001.0.0", "f.50.0.0", "f.23098.0.0", "f.23104.0.0") # age,sex,height, weight, BMI
+cov_id <- c("f.21022.0.0","f.22001.0.0","f.50.0.0","f.23098.0.0","f.23104.0.0",
+             "f.23106.0.0", "f.23107.0.0", "f.23108.0.0", "f.23109.0.0",
+             "f.23110.0.0") #age,sex,height, weight, BMI, and impedance measures
 # pheno_id <- c("f.23248.2.0")
 pheno_id <- (commandArgs(TRUE))
 print(pheno_id)
 
 # split data into train and test
-file <- read.table("CombinedTotalMass.tab", header = TRUE, sep = "\t")
-in_id <- fread("final.king.cutoff.in.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
-out_id <- fread("final.king.cutoff.out.id") %>%
-  rename(f.eid = `#FID`) %>%
-  select(-IID)
+file <- read.table("DEXA.tab", header=TRUE, sep="\t")
+test_id <- readRDS("test_id.rds")
+train_id <- readRDS("train_id.rds")
 
-cov_column <- file %>% select(cov_id)
-
-# Filter UKB caucasian
-white <- data.table::fread("Ancestry.tab")
-file <- file %>%
-  inner_join(white) %>%
-  filter(!is.na(f.22006.0.0))
-
-
-train <- file %>%
-  inner_join(out_id) %>%
-  tidyr::drop_na(pheno_id) %>%
-  tidyr::drop_na(all_of(cov_id)) %>%
-  select(all_of(pheno_id), all_of(cov_id))
-test <- file %>%
-  inner_join(in_id) %>%
-  tidyr::drop_na(all_of(cov_id)) %>%
-  select(f.eid, all_of(pheno_id), all_of(cov_id))
+train <- file %>% 
+  filter(!is.na(f.22006.0.0)) %>% # Filter UKB caucasian
+  filter(f.eid %in% train_id) %>% 
+  tidyr::drop_na(pheno_id) %>% 
+  tidyr::drop_na(all_of(cov_id)) %>% 
+  select(all_of(c(pheno_id,cov_id)))
+test <- file %>% 
+filter(!is.na(f.22006.0.0)) %>% # Filter UKB caucasian 
+filter(f.eid %in% test_id) %>% 
+tidyr::drop_na(all_of(cov_id))%>% 
+select(all_of(c("f.eid", pheno_id, cov_id)))
 
 # Random Forest model
 model.rf <- ranger::ranger(
@@ -122,7 +111,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
   X.cov <- cbind(g_complete, (discovery %>% select("f.21022.0.0", "f.22001.0.0", starts_with("PC")))[!is.na(g), ])
   X.cov <- cbind(X.cov, rep(1, nrow(X.cov))) # append intercept
 
-  fit.binormal.discovery <- SurrogateRegression::Fit.BNLS(
+  fit.binormal.discovery <- SurrogateRegression::FitBNR(
     t = discovery$int[!is.na(g)],
     s = discovery$yhat_int[!is.na(g)],
     X = X.cov
@@ -137,7 +126,7 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
   X.cov <- cbind(g_complete, (validation %>% select("f.21022.0.0", "f.22001.0.0", starts_with("PC")))[!is.na(g), ])
   X.cov <- cbind(X.cov, rep(1, nrow(X.cov))) # append intercept
 
-  fit.binormal.validation <- SurrogateRegression::Fit.BNLS(
+  fit.binormal.validation <- SurrogateRegression::FitBNR(
     t = validation$int[!is.na(g)],
     s = validation$yhat_int[!is.na(g)],
     X = X.cov
@@ -145,8 +134,9 @@ results <- parLapply(cl, X = 1:ncol(G), fun = function(i) {
   out <- c(out, fit.binormal.validation@Regression.tab %>%
     filter(Outcome == "Target" & Coefficient == "g_complete") %>%
     select(Point, SE, p) %>% as.numeric())
+  out <- c(colnames(G)[i], out)
 
-  names <- c(
+  names <- c("rsid",
     "standard_discovery_beta", "standard_discovery_se", "standard_discovery_p",
     "standard_validation_beta", "standard_validation_se", "standard_validation_p",
     "synsurr_discovery_beta", "synsurr_discovery_se", "synsurr_discovery_p",
