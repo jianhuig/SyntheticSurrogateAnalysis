@@ -61,44 +61,12 @@ done
 plink --merge-list mergelist.txt --make-bed --out allchromosome
 
 # PCA needs to be scheduled to control memory
-sbatch pca.sh
+# sbatch pca.sh
 
 # Remove related individuals based on kingship
 # Needs to be paralleled to control memory
 sbatch kingship.sh
 # Combined paralled matrix into one
 find . -type f -name 'split.king.bin.*' -exec cat {} + >> split.king.bin
-# use 0.177 to remove frist degress
+# kingship cutoff
 plink2 --bfile allchromosome --king-cutoff split 0.0625 --out final
-
-###############################################################
-################## Phenotype and Covariates ###################
-###############################################################
-# Convert continous phenotypes by inverse normal transformation
-# and output phenotypes and covariates for British only
-Rscript phenotype_process.R
-
-# Merge ID present in phenotype, covariate and kingship
-awk 'FNR==NR { a[$1]=$2; next } $1 in a { print $1, $2}' phenotype.txt final.king.cutoff.in.id > temp.txt
-awk 'FNR==NR { a[$1]=$2; next } $1 in a { print $1, $2}' covariate.txt temp.txt > id.txt
-
-
-###############################################################
-################## Run Association Analysis ###################
-###############################################################
-sbatch association.sh
-
-
-###############################################################
-######## Visualization and Comparision with Nealab ############
-###############################################################
-# obatin summary statistics from nealab
-wget
-https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/50_irnt.gwas.imputed_v3.both_sexes.tsv.bgz -O 50_irnt.gwas.imputed_v3.both_sexes.tsv.bgz
-mv 50_irnt.gwas.imputed_v3.both_sexes.tsv.bgz 50_irnt.gwas.imputed_v3.both_sexes.tsv.gz
-gunzip 50_irnt.gwas.imputed_v3.both_sexes.tsv.gz
-# Plot figures in R
-Rscript postGWAS.R
-
-
-
