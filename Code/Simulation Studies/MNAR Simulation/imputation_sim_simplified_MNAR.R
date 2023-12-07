@@ -172,11 +172,13 @@ DGP <- function(
   }else{
     draw_u <- c()
   }
+  
   if(ycut_l != 0){
     draw_l <-  which(y <= quantile(y, ycut_l))
   }else{
     draw_l <- c()
   }
+  
   draw <- c(draw_l, draw_u)
   yobs <- y
   yobs[draw] <- NA
