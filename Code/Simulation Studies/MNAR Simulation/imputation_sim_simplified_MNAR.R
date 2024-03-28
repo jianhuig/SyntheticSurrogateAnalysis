@@ -2,7 +2,7 @@
 #' under correct and incorrect model specification.
 #' Updated: 2023-07-25
 #' 
-setwd("~/Documents/GitHub/SyntheticSurrogateAnalysis")
+setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Result/Simulation Studies/MNAR Simulation")
 # Lab/Projects/Synthetic Surrogates/")
 
 
@@ -493,7 +493,6 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
   
   pal <- ggsci::pal_d3()(5)
   q <- ggplot(data = df2) + 
-    theme_bw() + 
     theme(legend.position = "top") + 
     geom_point(
       aes(x = x, y = est, color = method, group = se_method),
@@ -541,12 +540,16 @@ q <- PlotSim(sim, ana_se = TRUE) +
   scale_y_continuous(
     breaks = seq(from = 0.0, to = 0.15, by = 0.05),
     limits = c(-0.05, 0.15)
-  )
+  )+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        legend.background = element_blank())
 show(q)
 
 ggsave(
   plot = q,
-  file = paste0("results/imputation_sim_mnar_", setting, ".png"),
+  file = paste0("imputation_sim_mnar_", setting, ".png"),
   device = "png",
   width = 8.0,
   height = 4.0,

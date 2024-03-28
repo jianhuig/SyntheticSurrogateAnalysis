@@ -4,7 +4,7 @@
 setting <- "balanced"
 ycut_u = 0.9
 ycut_l = 0.1
-source('Code/Simulation Studies/MNAR Simulation/imputation_sim_simplified_MNAR.R')
+source('/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Code/Simulation Studies/MNAR Simulation/imputation_sim_simplified_MNAR.R')
 
 # Top: removal of 10% from top
 
