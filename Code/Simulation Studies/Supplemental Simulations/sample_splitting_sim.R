@@ -1,7 +1,5 @@
-#' Purpose: Examine the trade-off between allocating subjects to the 
-#' model-building versus GWAS data sets. 
-#' Updated: 2023-08-23
-setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
+#' Purpose: Examine the effect of reusing the GWAS data set for model training and GWAS. 
+#' Updated: 2023-05-29
 
 library(dplyr)
 library(ggplot2)
@@ -281,10 +279,29 @@ if (file.exists(results_file)) {
     labels = c("5%", "10%", "15%", "20%", "25%")
   )
   
+  power_unagg <- data.table::fread(
+    file = "results/sample_splitting/sample_splitting_power_unagg.tsv")
+  
+  power_unagg$chi2 <- qchisq(power_unagg$bg_p, df = 1, lower.tail = FALSE)
+  
+  power_unagg$prop_train <- factor(
+    power_unagg$prop_train,
+    levels = c(0.05, 0.1, 0.15, 0.2, 0.25),
+    labels = c("5%", "10%", "15%", "20%", "25%")
+  )
+  
+  power_unagg$bias <- power_unagg$bg - 0.1
+  
 } else {
   
   file_dir <- "results/sample_splitting/power"
   unagg <- Compile(file_dir)
+  data.table::fwrite(
+    x = unagg,
+    file = "results/sample_splitting/sample_splitting_power_unagg.tsv",
+    sep = "\t"
+  )
+  
   agg <- unagg %>%
     dplyr::select(prop_train, bg_p) %>%
     dplyr::mutate(chi2 = qchisq(bg_p, df = 1, lower.tail = FALSE)) %>%
@@ -330,7 +347,13 @@ df$set <- factor(
 q_n <- ggplot() + 
   theme_bw() +
   theme(
-    legend.position = "top"
+    legend.position = "top",
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank()
+  ) + 
+  theme(
+    axis.line = element_line(color = 'black')
   ) +
   geom_col(
     data = df,
@@ -359,6 +382,14 @@ q_n <- ggplot() +
 # Plot expected chi2.
 q_pwr <- ggplot() +
   theme_bw() +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank()
+  ) + 
+  theme(
+    axis.line = element_line(color = 'black')
+  ) +
   geom_col(
     data = power_sim,
     aes(x = prop_train, y = mu, fill = prop_train),
@@ -416,31 +447,48 @@ if (file.exists(results_file)) {
   
 }
   
-q_bias <- ggplot() + 
+q_bias <- ggplot(data = power_unagg) + 
   theme_bw() +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank()
+  ) + 
+  theme(
+    axis.line = element_line(color = 'black')
+  ) +
   geom_hline(
-    yintercept = 0.1,
+    yintercept = 0.0,
     linetype = "dashed",
     color = "gray",
     linewidth = 1.2
   ) +
-  geom_col(
-    data = bias_sim,
-    aes(x = prop_train, y = mu, fill = prop_train),
+  geom_boxplot(
+    aes(
+      x = prop_train,
+      y = bias,
+      ymin = quantile(bias, 0.05),
+      lower = quantile(bias, 0.25),
+      middle = quantile(bias, 0.50),
+      upper = quantile(bias, 0.75),
+      ymax = quantile(bias, 0.95),
+      fill = prop_train
+    ),
+    position = position_dodge(0.9),
     show.legend = FALSE
-  ) +
-  geom_errorbar(
-    data = bias_sim,
-    aes(x = prop_train, ymin = lower, ymax = upper),
-    width = 0.5
+  ) + 
+  geom_violin(
+    aes(x = prop_train, y = bias, fill = prop_train),
+    alpha = 0.2,
+    show.legend = FALSE
   ) + 
   scale_x_discrete(
     name = "Proportion of Data\nAllocated to Model-Building"
   ) +
   scale_y_continuous(
     name = expression(Estimated~beta[G]),
-    limits = c(0.0, 0.14),
-    breaks = seq(from = 0.0, to = 0.14, by = 0.02)
+    limits = c(-0.2, 0.2),
+    breaks = seq(from = -0.2, to = 0.2, by = 0.04)
   ) +
   scale_fill_brewer(
     palette = "Blues"
@@ -485,12 +533,14 @@ if (file.exists(results_file)) {
 
 q_rho <- ggplot() + 
   theme_bw() +
-  geom_hline(
-    yintercept = 0.1,
-    linetype = "dashed",
-    color = "gray",
-    linewidth = 1.2
-  ) +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank()
+  ) + 
+  theme(
+    axis.line = element_line(color = 'black')
+  ) + 
   geom_col(
     data = rho_sim,
     aes(x = prop_train, y = mu, fill = prop_train),
@@ -500,7 +550,7 @@ q_rho <- ggplot() +
     data = rho_sim,
     aes(x = prop_train, ymin = lower, ymax = upper),
     width = 0.5
-  ) + 
+  ) +
   scale_x_discrete(
     name = "Proportion of Data\nAllocated to Model-Building"
   ) +
@@ -508,6 +558,9 @@ q_rho <- ggplot() +
     name = "Target-Surrogate Correlation"
   ) +
   scale_fill_brewer(
+    palette = "Blues"
+  ) +
+  scale_color_brewer(
     palette = "Blues"
   ) +
   ggtitle("Correlation")
@@ -524,5 +577,5 @@ ggsave(
   plot = q_panel,
   file = "results/sample_splitting.pdf",
   width = 12.0,
-  height = 8.0
+  height = 9.0
 )

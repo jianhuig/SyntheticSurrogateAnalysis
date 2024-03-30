@@ -1,6 +1,5 @@
 #' Purpose: Examine the effect of reusing the GWAS data set for model training and GWAS. 
 #' Updated: 2023-08-21
-setwd("~/Documents/Lab/Projects/Synthetic Surrogates/")
 
 library(dplyr)
 library(ggplot2)
@@ -222,35 +221,43 @@ Compile <- function(file_dir) {
 # # Type I error simulation.
 # -----------------------------------------------------------------------------
 
-# results_file <- "results/subject_reuse/subject_reuse_sim_t1e.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_sim_misspec_t1e.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_sim_high_corr_t1e.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_sim_loess_t1e.tsv"
-results_file <- "results/subject_reuse/subject_reuse_sim_cubic_assoc_t1e.tsv"
+t1e_sims <- c(
+  "results/subject_reuse/t1e",
+  "results/subject_reuse/t1e_high_corr",
+  "results/subject_reuse/t1e_misspec"
+)
 
-if (file.exists(results_file)) {
+if (FALSE) {
   
-  t1e_sim <- data.table::fread(results_file)
-  
-} else {
-  
-  file_dir <- "results/subject_reuse/t1e_cubic_assoc/"
-  unagg <- Compile(file_dir)
-  agg <- unagg %>%
-    dplyr::select(miss, indep_train, bg_p) %>%
-    dplyr::mutate(chi2 = qchisq(bg_p, df = 1)) %>%
-    dplyr::group_by(miss, indep_train) %>%
-    dplyr::summarise(
-      mu = mean(chi2),
-      se = sqrt(var(chi2) / dplyr::n()),
-      lower = mu - 2 * se,
-      upper = mu + 2 * se
+  for (sim in t1e_sims) {
+    
+    base_name <- basename(sim)
+    
+    unagg <- Compile(sim)
+    data.table::fwrite(
+      x = unagg,
+      file = glue::glue("results/subject_reuse/unagg/{base_name}.tsv"),
+      sep = "\t"
     )
-  data.table::fwrite(
-    x = agg,
-    file = results_file,
-    sep = "\t"
-  )
+    
+    agg <- unagg %>%
+      dplyr::select(miss, indep_train, bg_p) %>%
+      dplyr::mutate(chi2 = qchisq(bg_p, df = 1)) %>%
+      dplyr::group_by(miss, indep_train) %>%
+      dplyr::summarise(
+        mu = mean(chi2),
+        se = sqrt(var(chi2) / dplyr::n()),
+        lower = mu - 2 * se,
+        upper = mu + 2 * se
+      )
+    
+    data.table::fwrite(
+      x = agg,
+      file = glue::glue("results/subject_reuse/agg/{base_name}.tsv"),
+      sep = "\t"
+    )
+    
+  }
   
 }
 
@@ -292,34 +299,42 @@ if (FALSE) {
 # Bias simulation.
 # -----------------------------------------------------------------------------
 
-# results_file <- "results/subject_reuse/subject_reuse_sim_bias.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_misspec_sim_bias.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_high_corr_sim_bias.tsv"
-# results_file <- "results/subject_reuse/subject_reuse_sim_loess_bias.tsv"
-results_file <- "results/subject_reuse/subject_reuse_cubic_assoc_bias.tsv"
+bias_sims <- c(
+  "results/subject_reuse/bias",
+  "results/subject_reuse/bias_high_corr",
+  "results/subject_reuse/bias_misspec"
+)
 
-if (file.exists(results_file)) {
+if (FALSE) {
   
-  bias_sim <- data.table::fread(results_file)
-  
-} else {
-  
-  file_dir <- "results/subject_reuse/bias_cubic_assoc/"
-  unagg <- Compile(file_dir)
-  agg <- unagg %>%
-    dplyr::select(miss, indep_train, bg) %>%
-    dplyr::group_by(miss, indep_train) %>%
-    dplyr::summarise(
-      mu = mean(bg),
-      se = sqrt(var(bg) / dplyr::n()),
-      lower = mu - 2 * se,
-      upper = mu + 2 * se
+  for(sim in bias_sims) {
+    
+    base_name <- basename(sim)
+    
+    unagg <- Compile(file_dir)
+    data.table::fwrite(
+      x = unagg,
+      file = glue::glue("results/subject_reuse/unagg/{base_name}.tsv"),
+      sep = "\t"
     )
-  data.table::fwrite(
-    x = agg,
-    file = results_file,
-    sep = "\t"
-  )
+    
+    agg <- unagg %>%
+      dplyr::select(miss, indep_train, bg) %>%
+      dplyr::group_by(miss, indep_train) %>%
+      dplyr::summarise(
+        mu = mean(bg),
+        se = sqrt(var(bg) / dplyr::n()),
+        lower = mu - 2 * se,
+        upper = mu + 2 * se
+      )
+    
+    data.table::fwrite(
+      x = agg,
+      file = glue::glue("results/subject_reuse/agg/{base_name}.tsv"),
+      sep = "\t"
+    )
+    
+  }
   
 }
 
@@ -363,11 +378,31 @@ if (FALSE) {
 #' Expect Chi2 Plot
 #'
 #' @param df Data.frame.
-#' @param y_lim Y-axis limits.
-ExpectedChi2Plot <- function(df, y_lim = c(0, 1.4)) {
+ExpectedChi2Plot <- function(df) {
+  
+  df$chi2 <- qchisq(p = df$bg_p, df = 1) 
+  
+  df2 <- df %>%
+    dplyr::select(miss_factor, indep_train, chi2) %>%
+    dplyr::group_by(miss_factor, indep_train) %>%
+    dplyr::summarise(
+      mu = mean(chi2),
+      se = sqrt(var(chi2) / dplyr::n()),
+      lower = mu - 2 * se,
+      upper = mu + 2 * se
+    )
+  
   q <- ggplot() + 
     theme_bw() +
-    theme(legend.position = "top") +
+    theme(
+      legend.position = "top",
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank()
+    ) + 
+    theme(
+      axis.line = element_line(color = 'black')
+    ) +
     geom_hline(
       yintercept = 1.0,
       linetype = "dashed",
@@ -375,20 +410,20 @@ ExpectedChi2Plot <- function(df, y_lim = c(0, 1.4)) {
       linewidth = 1.2
     ) +
     geom_col(
-      data = df,
+      data = df2,
       aes(x = miss_factor, y = mu, fill = indep_train),
       position = position_dodge()
     ) +
     geom_errorbar(
-      data = df,
+      data = df2,
       aes(x = miss_factor, ymin = lower, ymax = upper, group = indep_train),
       position = position_dodge(0.9),
       width = 0.5
     ) + 
     scale_y_continuous(
       name = expression(Expected~X^2),
-      limits = y_lim,
-      breaks = seq(from = 0.0, to = max(y_lim), by = 0.2)
+      limits = c(0, 1.4),
+      breaks = seq(from = 0.0, to = 1.4, by = 0.2)
     ) +
     scale_x_discrete(
       name = "Target Missingness"
@@ -403,32 +438,48 @@ ExpectedChi2Plot <- function(df, y_lim = c(0, 1.4)) {
 #' Bias plot
 #'
 #' @param df Data.frame.
-#' @param y_lim Y-axis limits.
-BiasPlot <- function(df, y_lim = c(0, 0.14)) {
-  q <- ggplot() + 
+BiasPlot <- function(df) {
+  
+  df$bias <- df$bg - 0.1
+  
+  q <- ggplot(data = df) + 
     theme_bw() +
-    theme(legend.position = "top") +
+    theme(
+      legend.position = "top",
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank()
+    ) + 
+    theme(
+      axis.line = element_line(color = 'black')
+    ) +
     geom_hline(
-      yintercept = 0.1,
+      yintercept = 0.0,
       linetype = "dashed",
       color = "gray",
       linewidth = 1.2
     ) +
-    geom_col(
-      data = df,
-      aes(x = miss_factor, y = mu, fill = indep_train),
-      position = position_dodge()
-    ) +
-    geom_errorbar(
-      data = df,
-      aes(x = miss_factor, ymin = lower, ymax = upper, group = indep_train),
-      position = position_dodge(0.9),
-      width = 0.5
+    geom_boxplot(
+      aes(
+        x = miss_factor,
+        y = bias,
+        ymin = quantile(bias, 0.05),
+        lower = quantile(bias, 0.25),
+        middle = quantile(bias, 0.50),
+        upper = quantile(bias, 0.75),
+        ymax = quantile(bias, 0.95),
+        fill = indep_train
+      ),
+      position = position_dodge(0.9)
+    ) + 
+    geom_violin(
+      aes(x = miss_factor, y = bias, fill = indep_train),
+      alpha = 0.2
     ) + 
     scale_y_continuous(
       name = expression(Estimated~beta[G]),
-      limits = y_lim,
-      breaks = seq(from = 0.0, to = max(y_lim), by = 0.02)
+      limits = c(-0.2, 0.2),
+      breaks = seq(from = -0.2, to = 0.2, by = 0.04)
     ) +
     scale_x_discrete(
       name = "Target Missingness"
@@ -469,63 +520,37 @@ CreatePanel <- function(bias_df, t1e_df) {
 }
 
 # -----------------------------------------------------------------------------
-
-t1e_sim$miss_factor <- factor(
-  t1e_sim$miss,
-  levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
-  labels = c("0%", "25%", "50%", "75%", "90%")
-)
-
-bias_sim$miss_factor <- factor(
-  bias_sim$miss,
-  levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
-  labels = c("0%", "25%", "50%", "75%", "90%")
-)
-
-
-
-if (FALSE) {
-  ggsave(
-    plot = q_panel,
-    file = "results/data_reuse.pdf",
-    width = 9.0,
-    height = 6.0
-  )
-}
-
-
-# -----------------------------------------------------------------------------
-# Supplemental pannel.
+# Supplemental panel.
 # -----------------------------------------------------------------------------
 
-bias_sim_1 <- data.table::fread("results/subject_reuse/subject_reuse_sim_bias.tsv")
-bias_sim_0 <- data.table::fread("results/subject_reuse/subject_reuse_misspec_sim_bias.tsv")
+bias_sim_1 <- data.table::fread("results/subject_reuse/unagg/bias.tsv")
+bias_sim_0 <- data.table::fread("results/subject_reuse/unagg/bias_misspec.tsv")
 
-t1e_sim_1 <- data.table::fread("results/subject_reuse/subject_reuse_sim_t1e.tsv")
-t1e_sim_0 <- data.table::fread("results/subject_reuse/subject_reuse_sim_misspec_t1e.tsv")
+t1e_sim_1 <- data.table::fread("results/subject_reuse/unagg/t1e.tsv")
+t1e_sim_0 <- data.table::fread("results/subject_reuse/unagg/t1e_misspec.tsv")
 
 # Bias.
 bias_sim_0$miss_factor <- factor(
-  t1e_sim$miss,
+  bias_sim_0$miss,
   levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
   labels = c("0%", "25%", "50%", "75%", "90%")
 )
 
 bias_sim_1$miss_factor <- factor(
-  t1e_sim$miss,
+  bias_sim_1$miss,
   levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
   labels = c("0%", "25%", "50%", "75%", "90%")
 )
 
 # Type I error.
 t1e_sim_0$miss_factor <- factor(
-  t1e_sim$miss,
+  t1e_sim_0$miss,
   levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
   labels = c("0%", "25%", "50%", "75%", "90%")
 )
 
 t1e_sim_1$miss_factor <- factor(
-  t1e_sim$miss,
+  t1e_sim_1$miss,
   levels = c(0.00, 0.25, 0.50, 0.75, 0.90),
   labels = c("0%", "25%", "50%", "75%", "90%")
 )
@@ -546,7 +571,7 @@ if (FALSE) {
     plot = overall,
     file = "results/data_reuse.pdf",
     width = 12.0,
-    height = 6.0
+    height = 9.0
   )
   
 }
