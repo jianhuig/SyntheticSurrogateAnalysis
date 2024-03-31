@@ -226,17 +226,21 @@ p1 <- t1e_result %>%
   geom_abline(intercept = 0, slope = 1, color = "red")+
   geom_line(aes(expected, cupper), linetype = 2) +
   geom_line(aes(expected, clower), linetype = 2) +
-  theme_bw()+
-  facet_wrap(~miss, labeller = as_labeller(missing_names))
+  facet_wrap(~miss, labeller = as_labeller(missing_names), scales = "free")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        legend.background = element_blank(),
+        legend.key = element_blank())
+
 
 ggsave(
   plot = p1,
-  filename = "qq_sim.png",
-  device = "png",
+  filename = "../qq_sim.pdf",
+  device = "pdf",
   height = 6,
   width = 7.5,
-  units = "in",
-  dpi = 360
+  units = "in"
 )
 
 # Run the power simulation for different SNP-heritability level
@@ -297,6 +301,8 @@ print(xtable::xtable(t1e_table %>%
 
 
 # Figure for main text with power curves
+power_result <- readRDS("/Users/jianhuigao/Library/CloudStorage/OneDrive-UniversityofToronto/Desktop/SyntheticSurrogateAnalysis/Data/power1e4.rds")
+
 color_ramp <- colorRampPalette(colors = c("white", "#0073C2FF"))
 biv_palette <- color_ramp(n = 9)[c(3, 5, 7, 9)]
 
@@ -312,21 +318,25 @@ power_plot <- power_result %>%
   )) +
   geom_point() +
   geom_line() +
-  facet_wrap(.~miss, labeller = as_labeller(missing_names))+
+  facet_wrap(.~miss, labeller = as_labeller(missing_names), scales = "free")+
   xlab("SNP Heritability (%)") +
   ylab("Power") +
   ylim(0, 1) +
   guides(color = guide_legend(title = expression(rho))) +
-  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+ theme_bw()
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        legend.background = element_blank(),
+        legend.key = element_blank())
 
 ggsave(
   plot = power_plot,
-  filename = "t1e_power_power_curves.png",
-  device = "png",
+  filename = "../t1e_power_power_curves.pdf",
+  device = "pdf",
   height = 6,
   width = 7.5,
-  units = "in",
-  dpi = 360
+  units = "in"
 )
 
 
@@ -357,12 +367,17 @@ re_plot <- power_result %>%
   ylab("Relative Efficiency") +
   guides(color = guide_legend(title = expression(rho))) +
   scale_x_continuous(breaks = c(0,25,50,75,90))+
-  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+theme_bw()
+  scale_color_manual(name = expression(rho ~ "(%)"), values = biv_palette)+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        legend.background = element_blank(),
+        legend.key = element_blank())
 
 ggsave(
   plot = re_plot,
-  filename = "t1e_power_RE.png",
-  device = "png",
+  filename = "../t1e_power_RE.pdf",
+  device = "pdf",
   height = 6,
   width = 7.5,
   units = "in",
@@ -381,17 +396,22 @@ re_h2_plot <- power_result %>%
   ggplot(aes(x = pve_g*100, y = re, group = factor(rho), color = factor(rho))) +
   geom_point() +
   geom_line() +
-  facet_wrap(. ~ miss, labeller = as_labeller(missing_names)) +
+  ylim(0.9, 2.2)+
+  facet_wrap(. ~ miss, labeller = as_labeller(missing_names), scales = "free") +
   scale_color_manual(name = expression(rho), values = biv_palette) +
   xlab("SNP Heritability (%)") +
   scale_x_continuous(breaks = c(0.1,0.3,0.5,0.7,0.9,1.1))+
   ylab("Relative Efficiency")+
-  theme_bw()
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        strip.background = element_rect(fill = "white", colour = NA),
+        legend.background = element_blank(),
+        legend.key = element_blank())
 
 ggsave(
   plot = re_h2_plot,
-  filename = "t1e_power_RE_h2.png",
-  device = "png",
+  filename = "../t1e_power_RE_h2.pdf",
+  device = "pdf",
   height = 6,
   width = 7.5,
   units = "in",
