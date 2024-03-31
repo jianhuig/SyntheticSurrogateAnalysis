@@ -1,12 +1,6 @@
 #' Purpose: Examine bias and variance of multiple imputation procedure
 #' under correct and incorrect model specification.
-#' Updated: 2023-07-25
-#' 
-setwd("/Users/jianhuigao/Desktop/SyntheticSurrogateAnalysis/Result/Simulation Studies/MNAR Simulation")
-# Lab/Projects/Synthetic Surrogates/")
-
-
-# devtools::install_github(repo = 'zrmacc/SurrogateRegression')
+#' Updated: 2022-07-25
 
 library(dplyr)
 library(ggplot2)
@@ -28,9 +22,7 @@ Sim <- function(
   n0 = 1e3,
   n1 = 1e4,
   reps = 500,
-  train_indep = TRUE,
-  ycut_u,
-  ycut_l
+  train_indep = TRUE
 ) {
   
   # Imputation scenarios, listing which covariates to include.
@@ -50,7 +42,7 @@ Sim <- function(
   # 1. Correclty specified, including G and X.
   # 2. Misspecified: G only.
   # 3. Misspecified: X only.
-  
+
   # For each inner loop, the following estimates are calculated:
   # 1. Single imputation.
   # 2. Multiple imputation.
@@ -62,13 +54,13 @@ Sim <- function(
     # The same data sets are used for each imputation scenario
     #  to make the results comparable.
     if (train_indep) {
-      train_data <- DGP(n0, ycut_u = ycut_u, ycut_l = ycut_l)
-      eval_data <- DGP(n1, ycut_u = ycut_u, ycut_l = ycut_l)
+      train_data <- DGP(n0)
+      eval_data <- DGP(n1)
     } else {
-      eval_data <- DGP(n1, ycut_u = ycut_u, ycut_l = ycut_l)
+      eval_data <- DGP(n1)
       train_data <- eval_data
     }
-    
+
     
     # Oracle estimator.
     oracle_est <- OracleEst(eval_data)
@@ -145,13 +137,11 @@ Sim <- function(
 #' @param rho Correlation of G with X
 #' @return Data.frame.
 DGP <- function(
-  n,
-  bg = sqrt(0.01),
-  bx = -0.50,
-  miss = 0.25,
-  rho = sqrt(0.5),
-  ycut_u = 0.9,
-  ycut_l = 0.1
+    n,
+    bg = sqrt(0.01),
+    bx = -0.50,
+    miss = 0.25,
+    rho = sqrt(0.5)
 ) {
   
   # Genotype and covariates. G and Z have correlation rho_gz.
@@ -165,21 +155,8 @@ DGP <- function(
   # Oracle outcome.
   y <- eta + stats::rnorm(n, sd = sqrt(1 - ve))
   
-  # Outcome with missingness based on the value of y.
-  # draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
-  if(ycut_u != 1){
-    draw_u <-  which(y >= quantile(y, ycut_u))
-  }else{
-    draw_u <- c()
-  }
-  
-  if(ycut_l != 0){
-    draw_l <-  which(y <= quantile(y, ycut_l))
-  }else{
-    draw_l <- c()
-  }
-  
-  draw <- c(draw_l, draw_u)
+  # Outcome with missingness.
+  draw <- sample(seq_len(n), size = round(miss * n), replace = FALSE)
   yobs <- y
   yobs[draw] <- NA
   
@@ -331,9 +308,9 @@ GenSingleImp <- function(data, imp_param, add_error = TRUE) {
 #' @param n_imp Number of imputations
 #' @return Numeric vector containing "mi_est" and "mi_se".
 MI <- function(
-  data,
-  imp_param,
-  n_imp = 10
+    data,
+    imp_param,
+    n_imp = 10
 ) {
   
   # Run n_imp imputations.
@@ -461,15 +438,15 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
     labels = c(
       "Oracle",
       "Standard",
-      "MI\n(G,X)",
-      "SI\n(G,X)",
-      "SS\n(G,X)",
-      "MI\n(G)",
-      "SI\n(G)",
-      "SS\n(G)",
-      "MI\n(X)",
-      "SI\n(X)",
-      "SS\n(X)"
+      "Multiple\nImputation\n(G,X)",
+      "Single\nImputation\n(G,X)",
+      "SynSurr\n(G,X)",
+      "Multiple\nImputation\n(G)",
+      "Single\nImputation\n(G)",
+      "SynSurr\n(G)",
+      "Multiple\nImputation\n(X)",
+      "Single\nImputation\n(X)",
+      "SynSurr\n(X)"
     ),
     ordered = TRUE
   )
@@ -493,7 +470,16 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
   
   pal <- ggsci::pal_d3()(5)
   q <- ggplot(data = df2) + 
-    theme(legend.position = "top") + 
+    theme_bw() + 
+    theme(
+      legend.position = "top",
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(),
+      panel.border = element_blank()
+    ) + 
+    theme(
+      axis.line = element_line(color = 'black')
+    ) +
     geom_point(
       aes(x = x, y = est, color = method, group = se_method),
       size = 4,
@@ -533,47 +519,51 @@ PlotSim <- function(sim, ana_se = TRUE, bg = 0.10) {
 
 # Simulation with correctly specified imputation model.
 set.seed(110)
-sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = TRUE, 
-           ycut_u = ycut_u, ycut_l = ycut_l)
+if (FALSE) {sim <- Sim(n0 = 1e3, n1 = 1e4, train_indep = FALSE)}
+
+# data.table::fwrite(
+#   x = sim,
+#   file = "results/data/imputation_sim_v3.tsv",
+#   sep = "\t"
+# )
+sim <- data.table::fread(file = "results/data/imputation_sim_v3.tsv")
 
 q <- PlotSim(sim, ana_se = TRUE) +
   scale_y_continuous(
     breaks = seq(from = 0.0, to = 0.15, by = 0.05),
     limits = c(-0.05, 0.15)
-  )+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"),
-        strip.background = element_rect(fill = "white", colour = NA),
-        legend.background = element_blank())
+  )
 show(q)
 
-ggsave(
-  plot = q,
-  file = paste0("imputation_sim_mnar_", setting, ".png"),
-  device = "png",
-  width = 8.0,
-  height = 4.0,
-  units = "in",
-  dpi = 480
-)
+if (FALSE) {
+  ggsave(
+    plot = q,
+    file = "results/imputation_sim_v3.pdf",
+    device = "png",
+    width = 9.0,
+    height = 4.5,
+    units = "in"
+  )
+}
 
 
 # Tabulate results.
 tab <- TabulateSim(sim)
 show(tab)
-file <- paste0("Data/imputation_sim_tab_mnar_", setting, ".tsv")
-data.table::fwrite(
-  x = tab,
-  file = file,
-  sep = "\t"
-)
+file <- paste0("results/data/imputation_sim_tab_v3.0.tsv")
+if (FALSE) {
+  data.table::fwrite(
+    x = tab,
+    file = file,
+    sep = "\t"
+  )
+}
 
 # -----------------------------------------------------------------------------
 # Tabulate result.
 # -----------------------------------------------------------------------------
 
-sim <- data.table::fread(file = paste0("Data/imputation_sim_tab_mnar_", 
-                                       setting, ".tsv"))
+sim <- data.table::fread(file = "results/data/imputation_sim_v2.tsv")
 tab <- TabulateSim(sim)
 
 order <- c(5, 4, 7, 2, 10, 6, 1, 9, 8, 3, 11)
@@ -589,3 +579,4 @@ ordered_tab <- ordered_tab %>%
     "Empirical SE" = ese
   )
 print(xtable::xtable(ordered_tab, digits = 3), include.rownames = FALSE)
+
